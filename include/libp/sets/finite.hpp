@@ -8,22 +8,33 @@
 #include <utility>
 #include <set>
 #include <libp/sets/conditional.hpp>
+#include <libp/sets/measurable_set.hpp>
 
 namespace libp {
 
     template<class T>
-    using FiniteSet = std::set<T>;
+    class FiniteSet : public MeasurableSetCRTP<FiniteSet<T>> {
+        public:
+            FiniteSet() = default;
 
-    template<class L, class R>
-    auto operator&&(const FiniteSet<L>& lhs, const FiniteSet<R>& rhs) {
-        FiniteSet<typename std::common_type<L,R>::type> intersection;
-        std::set_intersection(
-            lhs.cbegin(), lhs.cend(),
-            rhs.cbegin(), rhs.cend(),
-            std::inserter(intersection, intersection.begin())
-        );
-        return intersection;
-    }
+            FiniteSet(std::initializer_list<T> il): storage(std::move(il)) { }
+
+            template<class R>
+            auto operator&&(const FiniteSet<R>& rhs) const {
+                FiniteSet<typename std::common_type<T,R>::type> intersection;
+                std::set_intersection(
+                    storage.cbegin(), storage.cend(),
+                    rhs.storage.cbegin(), rhs.storage.cend(),
+                    std::inserter(intersection.storage, intersection.storage.begin())
+                );
+                return intersection;
+            }
+
+            auto size(void) const { return storage.size(); }
+
+        private:
+            std::set<T> storage;
+    };
 
     template<class T>
     auto finite_set(std::initializer_list<T> il) {

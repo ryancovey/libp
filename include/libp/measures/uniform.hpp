@@ -8,22 +8,28 @@
 #include <utility>
 #include <libp/measures/counting.hpp>
 #include <libp/measures/lebesgue.hpp>
+#include <libp/measures/measure.hpp>
 #include <libp/sets/conditional.hpp>
 #include <libp/sets/finite.hpp>
+#include <libp/sets/measurable_set.hpp>
 
 namespace libp {
 
     template<
         class SampleSpaceType,
-        class RealType = double
+        class RealType = double,
+        typename = std::enable_if_t<std::is_base_of<MeasurableSet, std::decay_t<SampleSpaceType>>::value>
     >
-    class UniformDistribution {
+    class UniformDistribution : public Measure {
         public:
             UniformDistribution(SampleSpaceType sample_space_in):
                 sample_space(std::move(sample_space_in))
             { }
 
-            template<class EventType>
+            template<
+                class EventType,
+                typename = std::enable_if_t<std::is_base_of<MeasurableSet, std::decay_t<EventType>>::value>
+            >
             RealType operator()(const EventType& event) {
                 auto NS = CountingMeasure(sample_space);
                 if (NS == 0) {
