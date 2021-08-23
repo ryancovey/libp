@@ -4,7 +4,8 @@
 using namespace libp;
 
 int main(void) {
-    auto P = UniformDistribution<FiniteSet<int>>({1,2,3,4,5,6});
+    // auto P = UniformDistribution<FiniteSet<int>>({1,2,3,4,5,6});
+    auto P = uniform_distribution({1,2,3,4,5,6});
 
     // We can asign events to variables...
     FiniteSet<int> A = {1,2,3};

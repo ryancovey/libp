@@ -22,7 +22,7 @@ namespace libp {
     >
     class UniformDistribution : public Measure {
         public:
-            UniformDistribution(SampleSpaceType sample_space_in):
+            explicit UniformDistribution(SampleSpaceType sample_space_in):
                 sample_space(std::move(sample_space_in))
             { }
 
@@ -65,6 +65,16 @@ namespace libp {
         private:
             SampleSpaceType sample_space;
     };
+
+    template<class RealType = double, class SampleSpaceType>
+    auto uniform_distribution(SampleSpaceType sample_space) {
+        return UniformDistribution<SampleSpaceType, RealType>(std::move(sample_space));
+    }
+
+    template<class RealType = double, class T>
+    auto uniform_distribution(std::initializer_list<T> il) {
+        return uniform_distribution(FiniteSet<T>(std::move(il)));
+    }
 
 };
 
