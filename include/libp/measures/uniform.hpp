@@ -6,6 +6,7 @@
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
+#include <libp/internal/constants.hpp>
 #include <libp/measures/counting.hpp>
 #include <libp/measures/lebesgue.hpp>
 #include <libp/measures/measure.hpp>
@@ -32,12 +33,12 @@ namespace libp {
             >
             Codomain operator()(const EventType& event) {
                 auto NS = counting_measure(sample_space);
-                if (NS == 0) {
-                    return 0;
+                if (NS == zero) {
+                    return zero;
                 }
 
                 auto LS = lebesgue_measure(sample_space);
-                if (LS == 0) {
+                if (LS == zero) {
                     counting_measure(event && sample_space)/NS;
                 } else {
                     lebesgue_measure(event && sample_space)/LS;
@@ -52,9 +53,9 @@ namespace libp {
             template<class UnconditionalSetType, class ConditioningSetType>
             auto operator()(const ConditionalSet<UnconditionalSetType, ConditioningSetType>& conditional_event) {
                 if (
-                    counting_measure(conditional_event.conditioning_set) > 0 &&
-                    lebesgue_measure(conditional_event.conditioning_set) == 0 &&
-                    lebesgue_measure(sample_space) > 0
+                    counting_measure(conditional_event.conditioning_set) > zero &&
+                    lebesgue_measure(conditional_event.conditioning_set) == zero &&
+                    lebesgue_measure(sample_space) > zero
                 ) {
                     throw std::runtime_error("Under a continuous uniform distribution, attempted to find the conditional probability of an event given a non-empty set of Lebesgue measure zero. This is yet to be implemented.");
                 }
@@ -66,6 +67,7 @@ namespace libp {
             SampleSpaceType sample_space;
             CountingMeasure<Codomain> counting_measure;
             LebesgueMeasure<Codomain> lebesgue_measure;
+            Codomain zero = internal::zero<Codomain>();
     };
 
     template<class RealType = double, class SampleSpaceType>

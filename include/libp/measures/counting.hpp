@@ -2,7 +2,11 @@
 #define LIBP_MEASURES_COUNTING_HPP_GUARD
 
 #include <cstddef>
+#include <limits>
+#include <libp/internal/constants.hpp>
 #include <libp/measures/measure.hpp>
+#include <libp/sets/all.hpp>
+#include <libp/sets/universal.hpp>
 #include <libp/sets/finite.hpp>
 
 namespace libp {
@@ -10,14 +14,33 @@ namespace libp {
     template<class Codomain = std::size_t>
     class CountingMeasure : public Measure {
         public:
-            template<class T>
-            Codomain operator()(const FiniteSet<T>& A) {
-                return A.size();
+            template<
+                class SetType,
+                std::enable_if_t<std::is_base_of<MeasurableSet, std::decay_t<SetType>>::value, bool> = true
+            >
+            auto operator()(const SetType&) {
+                return zero<Codomain>();
+            }
+
+            auto operator()(const UniversalSet&) {
+                return infinity<Codomain>();
+            }
+
+            template<
+                class T,
+                std::enable_if_t<std::is_arithmetic<T>::value, bool> = true
+            >
+            auto operator()(const All<T>&) {
+                return infinity<Codomain>();
+            }
+
+            auto operator()(const All<void>&) {
+                return zero<Codomain>();
             }
 
             template<class T>
-            Codomain operator()(const T& A) {
-                return 0;
+            Codomain operator()(const FiniteSet<T>& A) {
+                return A.size();
             }
     };
 
