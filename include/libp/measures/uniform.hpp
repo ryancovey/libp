@@ -17,7 +17,7 @@ namespace libp {
 
     template<
         class SampleSpaceType,
-        class RealType = double,
+        class Codomain = double,
         typename = std::enable_if_t<std::is_base_of<MeasurableSet, std::decay_t<SampleSpaceType>>::value>
     >
     class UniformDistribution : public Measure {
@@ -30,17 +30,17 @@ namespace libp {
                 class EventType,
                 typename = std::enable_if_t<std::is_base_of<MeasurableSet, std::decay_t<EventType>>::value>
             >
-            RealType operator()(const EventType& event) {
-                auto NS = CountingMeasure(sample_space);
+            Codomain operator()(const EventType& event) {
+                auto NS = counting_measure(sample_space);
                 if (NS == 0) {
                     return 0;
                 }
 
-                auto LS = LebesgueMeasure(sample_space);
+                auto LS = lebesgue_measure(sample_space);
                 if (LS == 0) {
-                    return static_cast<RealType>(CountingMeasure(event && sample_space))/NS;
+                    counting_measure(event && sample_space)/NS;
                 } else {
-                    return static_cast<RealType>(LebesgueMeasure(event && sample_space))/LS;
+                    lebesgue_measure(event && sample_space)/LS;
                 }
             }
 
@@ -52,9 +52,9 @@ namespace libp {
             template<class UnconditionalSetType, class ConditioningSetType>
             auto operator()(const ConditionalSet<UnconditionalSetType, ConditioningSetType>& conditional_event) {
                 if (
-                    CountingMeasure(conditional_event.conditioning_set) > 0 &&
-                    LebesgueMeasure(conditional_event.conditioning_set) == 0 &&
-                    LebesgueMeasure(sample_space) > 0
+                    counting_measure(conditional_event.conditioning_set) > 0 &&
+                    lebesgue_measure(conditional_event.conditioning_set) == 0 &&
+                    lebesgue_measure(sample_space) > 0
                 ) {
                     throw std::runtime_error("Under a continuous uniform distribution, attempted to find the conditional probability of an event given a non-empty set of Lebesgue measure zero. This is yet to be implemented.");
                 }
@@ -64,6 +64,8 @@ namespace libp {
 
         private:
             SampleSpaceType sample_space;
+            CountingMeasure<Codomain> counting_measure;
+            LebesgueMeasure<Codomain> lebesgue_measure;
     };
 
     template<class RealType = double, class SampleSpaceType>
