@@ -38,8 +38,8 @@ namespace libp {
                 return zero<Codomain>();
             }
 
-            template<class T>
-            Codomain operator()(const FiniteSet<T>& A) {
+            template<class T, template<class, class...> class C>
+            Codomain operator()(const FiniteSet<T,C>& A) {
                 return A.size();
             }
     };

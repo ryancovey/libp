@@ -39,9 +39,9 @@ namespace libp {
 
                 auto LS = lebesgue_measure(sample_space);
                 if (LS == zero) {
-                    counting_measure(event && sample_space)/NS;
+                    return counting_measure(event && sample_space)/NS;
                 } else {
-                    lebesgue_measure(event && sample_space)/LS;
+                    return lebesgue_measure(event && sample_space)/LS;
                 }
             }
 
