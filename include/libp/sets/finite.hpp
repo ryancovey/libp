@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <initializer_list>
 #include <iterator>
+#include <ostream>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -21,9 +22,16 @@ namespace libp {
         using finite_set_default_container = std::vector<T, Args...>;
     }
 
+    template<class T, template<class, class...> class Container>
+    class FiniteSet;
+
+    template<class T, template<class, class...> class Container>
+    std::ostream& operator<<(std::ostream&, const FiniteSet<T, Container>&);
+
     template<class T, template<class, class...> class Container = finite_set_default_container>
     class FiniteSet : public MeasurableSetCRTP<FiniteSet<T, Container>> {
         template<class, template<class, class...> class> friend class FiniteSet;
+        friend std::ostream& operator<< <> (std::ostream&, const FiniteSet<T, Container>&);
 
         public:
             FiniteSet() = default;
@@ -68,14 +76,6 @@ namespace libp {
                 // todo.
             }
             */
-
-            auto operator&&(const UniversalSet&) const {
-                return *this;
-            }
-
-            auto operator||(const UniversalSet&) const {
-                return all();
-            }
 
             // If objects of type T cannot be converted to RT and back, then surely
             // *this && all<RT>() == none().
@@ -278,6 +278,22 @@ namespace libp {
     >
     auto operator|(FiniteSet<LT, LC> lhs, FiniteSet<RT, RC> rhs) {
         return conditional_set(std::move(lhs), std::move(rhs));
+    }
+
+    template<class T, template<class, class...> class Container = finite_set_default_container>
+    std::ostream& operator<<(std::ostream& os, const FiniteSet<T, Container>& A) {
+        auto iter = std::cbegin(A.storage);
+        auto end = std::cend(A.storage);
+        os << '{';
+        if (iter != end) {
+            os << *iter;
+            ++iter;
+            for (; iter != end; ++iter) {
+                os << ", " << *iter;
+            }
+        }
+        os << '}';
+        return os;
     }
 
 }
