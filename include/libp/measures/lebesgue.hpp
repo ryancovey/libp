@@ -4,8 +4,8 @@
 #include <type_traits>
 #include <libp/internal/constants.hpp>
 #include <libp/measures/measure.hpp>
-#include <libp/sets/all.hpp>
 #include <libp/sets/measurable_set.hpp>
+#include <libp/sets/real_numbers.hpp>
 #include <libp/sets/universal.hpp>
 
 namespace libp {
@@ -24,23 +24,10 @@ namespace libp {
             auto operator()(const UniversalSet&) {
                 return infinity<Codomain>();
             }
-            
-            template<
-                class T,
-                std::enable_if_t<std::is_floating_point<T>::value, bool> = true
-            >
-            auto operator()(const All<T>&) {
+
+            auto operator()(const RealNumbers&) {
                 return infinity<Codomain>();
-            }
-
-            auto operator()(const All<void>&) {
-                return zero<Codomain>();
-            }
-
-            template<class T, template<class, class...> class C>
-            Codomain operator()(const FiniteSet<T, C>&) {
-                return zero<Codomain>();
-            }
+            }            
     };
 
     template<class Codomain = double, class SetType>

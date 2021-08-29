@@ -12,7 +12,9 @@
 #include <libp/internal/constants.hpp>
 #include <libp/sets/all.hpp>
 #include <libp/sets/conditional.hpp>
+#include <libp/sets/integers.hpp>
 #include <libp/sets/measurable_set.hpp>
+#include <libp/sets/natural_numbers.hpp>
 #include <libp/sets/none.hpp>
 
 namespace libp {
@@ -91,35 +93,32 @@ namespace libp {
                 return none();
             }
 
-            // If *this is a subset of all<RT>(), *this && all<RT>() == *this. Right now we're only doing
-            // this for standard arithmetic types.
+            // If *this is a subset of the natural numbers and rhs are the natural numbers,
+            // then *this && rhs == *this. We create a template NN that must always be
+            // NaturalNumbers because enable_if only works on templates.
             template<
-                class RT,
+                class NN,
                 std::enable_if_t<
-                    (std::is_unsigned<T>::value && std::is_arithmetic<RT>::value) ||        // T represents naturals.
-                    (
-                        std::is_integral<T>::value && std::is_signed<T>::value &&           // T and RT represent integers.
-                        std::is_integral<RT>::value && std::is_signed<RT>::value
-                    ) ||
-                    (std::is_arithmetic<T>::value && std::is_floating_point<RT>::value),    // RT represents reals.
+                    std::is_unsigned<T>::value &&
+                    std::is_same<NaturalNumbers, NN>::value,
                     bool
                 > = true
             >
-            auto operator&&(const All<RT>&) {
+            auto operator&&(const NN&) {
                 return *this;
             }
 
-            // If *this is a subset of the integers and all<RT>() contains the naturals,
-            // then *this && all<RT>() contain all elements of *this that are >= 0.
+            // If *this is a subset of the integers and rhs are the natural numbers,
+            // then *this && rhs contain all the elements of *this that are >= 0.
             template<
-                class RT,
+                class NN,
                 std::enable_if_t<
-                    std::is_integral<T>::value && std::is_signed<T>::value &&   // T represents integers.
-                    std::is_integral<RT>::value && std::is_unsigned<RT>::value, // RT represents naturals.
+                    std::is_integral<T>::value && std::is_signed<T>::value &&
+                    std::is_same<NaturalNumbers, NN>::value,
                     bool
                 > = true
             >
-            auto operator&&(const All<RT>&) {
+            auto operator&&(const NN&) {
                 FiniteSet<T, Container> intersection;
                 auto zero = internal::zero<T>();
                 for (const auto& element : storage) {
@@ -130,17 +129,17 @@ namespace libp {
                 return intersection;
             }
 
-            // If *this is a subset of the reals and all<RT>() contains the naturals and zero,
-            // then *this && all<RT>() contain all elements of *this that are naturals or zero.
+            // If *this is a subset of the real numbers and rhs is the natural numbers,
+            // then *this && rhs contain all elements of *this that are natural numbers.
             template<
-                class RT,
+                class NN,
                 std::enable_if_t<
-                    std::is_floating_point<T>::value && // T represents reals.
-                    std::is_unsigned<RT>::value,        // RT represents naturals.
+                    std::is_floating_point<T>::value &&
+                    std::is_same<NaturalNumbers, NN>::value,
                     bool
                 > = true
             >
-            auto operator&&(const All<RT>&) {
+            auto operator&&(const NN&) {
                 FiniteSet<T, Container> intersection;
                 auto zero = internal::zero<T>();
                 for (const auto& element : storage) {
@@ -151,17 +150,45 @@ namespace libp {
                 return intersection;
             }
 
-            // If *this is a subset of the reals and all<RT>() contains the integers,
-            // then *this && all<RT>() contain all elements of *this that are integers.
+            // If *this is a subset of the natural numbers and rhs is the natural numbers,
+            // then *this || rhs == rhs.
             template<
-                class RT,
+                class NN,
                 std::enable_if_t<
-                    std::is_floating_point<T>::value &&                         // T represents reals.
-                    std::is_integral<RT>::value && std::is_signed<RT>::value,   // RT represents integers.
+                    std::is_unsigned<T>::value &&
+                    std::is_same<NaturalNumbers, NN>::value,
                     bool
                 > = true
             >
-            auto operator&&(const All<RT>&) {
+            auto operator||(const NN& rhs) {
+                return rhs;
+            }
+
+            // If *this is a subset of the integers and rhs are the integers,
+            // then *this && rhs == *this.
+            template<
+                class IT,
+                std::enable_if_t<
+                    std::is_integral<T>::value &&
+                    std::is_same<Integers, IT>::value,
+                    bool
+                > = true
+            >
+            auto operator&&(const IT&) {
+                return *this;
+            }
+
+            // If *this is a subset of the real numbers and rhs are the integers,
+            // then *this && rhs contain all elements of *this that are integers.
+            template<
+                class IT,
+                std::enable_if_t<
+                    std::is_floating_point<T>::value &&
+                    std::is_same<Integers, IT>::value,
+                    bool
+                > = true
+            >
+            auto operator&&(const IT&) {
                 FiniteSet<T, Container> intersection;
                 for (const auto& element : storage) {
                     if (static_cast<T>(static_cast<long long>(element)) == element) {
@@ -169,6 +196,48 @@ namespace libp {
                     }
                 }
                 return intersection;
+            }
+
+            // If *this is a subset of the integers and rhs are the integers,
+            // then *this || rhs == rhs.
+            template<
+                class IT,
+                std::enable_if_t<
+                    std::is_integral<T>::value &&
+                    std::is_same<Integers, IT>::value,
+                    bool
+                > = true
+            >
+            auto operator||(const IT& rhs) {
+                return rhs;
+            }
+
+            // If *this is a subset of the real numbers and rhs are the real numbers,
+            // then *this && rhs == *this.
+            template<
+                class RN,
+                std::enable_if_t<
+                    std::is_arithmetic<T>::value &&
+                    std::is_same<RealNumbers, RN>::value,
+                    bool
+                > = true
+            >
+            auto operator&&(const RN&) {
+                return *this;
+            }
+
+            // If *this is a subset of the real numbers and rhs are the real numbers,
+            // then *this || rhs == rhs.
+            template<
+                class RN,
+                std::enable_if_t<
+                    std::is_arithmetic<T>::value &&
+                    std::is_same<RealNumbers, RN>::value,
+                    bool
+                > = true
+            >
+            auto operator||(const RN& rhs) {
+                return rhs;
             }
 
             // Elements of *this that do not change when cast to RT and back to
@@ -192,26 +261,16 @@ namespace libp {
                 return intersection;
             }
 
-            auto operator&&(const All<T>&) {
-                return *this;
-            }
-
-            // If *this is a subset of all<RT>(), then *this || all<RT>() == all<RT>(). Like
-            // for operator&&, we're currently only doing this for arithmetic types.
             template<
                 class RT,
                 std::enable_if_t<
-                    (std::is_arithmetic<T>::value && std::is_floating_point<RT>::value) ||  // RT are the reals
-                    (
-                        std::is_integral<T>::value && std::is_signed<T>::value &&           // T and RT are the integers.
-                        std::is_integral<RT>::value && std::is_signed<RT>::value
-                    ) ||
-                    (std::is_unsigned<T>::value && std::is_arithmetic<RT>::value),            // T are the naturals and zero.
+                    std::is_same<std::decay_t<T>, std::decay_t<RT>>::value &&
+                    !std::is_arithmetic<RT>::value,
                     bool
                 > = true
             >
-            auto operator||(const All<RT>&) {
-                return all<RT>();
+            auto operator&&(const All<RT>&) {
+                return *this;
             }
 
             template<class RT, template<class, class...> class RC>

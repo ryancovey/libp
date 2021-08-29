@@ -1,137 +1,87 @@
 #ifndef LIBP_SETS_ALL_HPP_GUARD
 #define LIBP_SETS_ALL_HPP_GUARD
 
+#include <type_traits>
+#include <libp/sets/integers.hpp>
+#include <libp/sets/natural_numbers.hpp>
+#include <libp/sets/null.hpp>
+#include <libp/sets/real_numbers.hpp>
 #include <libp/sets/universal.hpp>
 
 namespace libp {
+
+    template<class T>
+    class All;
+
+    template<class T, bool>
+    All<T> all(void);
     
     template<class T>
     class All final : public MeasurableSetCRTP<All<T>> {
-        public:
-            // Set intersection for arithmetic sets where lhs is a subset of or equal to rhs.
-            template<
-                class RT,
-                std::enable_if_t<
-                    (std::is_unsigned<T>::value && std::is_arithmetic<RT>::value) ||        // lhs is the naturals.
-                    (
-                        std::is_integral<T>::value && std::is_signed<T>::value &&           // lhs and rhs are the integers.
-                        std::is_integral<RT>::value && std::is_signed<RT>::value
-                    ) ||
-                    (std::is_arithmetic<T>::value && std::is_floating_point<RT>::value),    // rhs is the reals.
-                    bool
-                > = true
-            >
-            auto operator&&(const All<RT>&) {
-                return *this;
-            }
+        static_assert(
+            !std::is_arithmetic<T>::value,
+            "Use of the class libp::All<T> is forbidden for T a built-in arithmetic type (int, float, unsigned, double, long, etc.). "
+            "Use the classes libp::NaturalNumbers, libp::Integers and libp::RealNumbers instead. "
+            "Calling the function libp::all<T>() will return an object of type libp::NaturalNumbers for built-in unsigned integer T, "
+            "libp::Integers for built-in signed integer T, and libp::RealNumbers for built-in floating-point T."
+        );
 
-            // Set intersection for arithmetic sets where rhs is a subset of lhs.
-            template<
-                class RT,
-                std::enable_if_t<
-                    (std::is_floating_point<T>::value && std::is_integral<RT>::value) ||    // lhs is the reals, rhs is naturals or integers.
-                    (
-                        std::is_integral<T>::value && std::is_signed<T>::value &&           // lhs are the integers, rhs are the naturals.
-                        std::is_integral<RT>::value && std::is_unsigned<RT>::value
-                    ),
-                    bool
-                > = true
-            >
-            auto operator&&(const All<RT>& rhs) {
-                return rhs;
-            }
-
-            // Set union for arithmetic sets where lhs is a superset of or equal to rhs.
-            template<
-                class RT,
-                std::enable_if_t<
-                    (std::is_floating_point<T>::value && std::is_arithmetic<RT>::value) ||  // lhs is the reals.
-                    (
-                        std::is_integral<T>::value && std::is_signed<T>::value &&           // lhs and rhs are the integers.
-                        std::is_integral<RT>::value && std::is_signed<T>::value
-                    ) ||
-                    (std::is_arithmetic<T>::value && std::is_unsigned<RT>::value),          // rhs is the naturals.
-                    bool
-                > = true
-            >
-            auto operator||(const All<RT>&) {
-                return *this;
-            }
-
-            // Set union for arithmetic sets where rhs is a superset of lhs.
-            template<
-                class RT,
-                std::enable_if_t<
-                    (std::is_integral<T>::value && std::is_floating_point<RT>::value) ||    // lhs is the naturals or integers, rhs is the reals.
-                    (
-                        std::is_integral<T>::value && std::is_unsigned<T>::value &&         // lhs are the naturals, rhs are the integers.
-                        std::is_integral<RT>::value && std::is_signed<RT>::value
-                    ),
-                    bool
-                > = true
-            >
-            auto operator||(const All<RT>& rhs) {
-                return rhs;
-            }
+        static_assert(
+            !std::is_void<T>::value,
+            "Use of the class libp:All<void> is forbidden. Use libp::NullSet instead."
+        );
     };
 
-    inline UniversalSet all(void) {
+    inline auto all(void) {
         return UniversalSet();
     }
 
-    template<class T>
+    template<
+        class T,
+        std::enable_if_t<
+            !std::is_arithmetic<T>::value &&
+            !std::is_void<T>::value,
+            bool
+        > = true
+    >
     auto all(void) {
         return All<T>();
     }
 
     template<
         class T,
-        std::enable_if_t<
-            std::is_base_of<MeasurableSet, std::decay_t<T>>::value &&
-            !std::is_same<UniversalSet, std::decay_t<T>>::value,
-            bool
-        > = true
+        std::enable_if_t<std::is_void<T>::value, bool> = true
     >
-    auto operator&&(const All<void>& lhs, const T&) {
-        return lhs;
+    auto all(void) {
+        return NullSet();
+    }
+
+    template<
+        class T,
+        std::enable_if_t<std::is_unsigned<T>::value, bool> = true
+    >
+    auto all(void) {
+        return NaturalNumbers();
     }
 
     template<
         class T,
         std::enable_if_t<
-            std::is_base_of<MeasurableSet, std::decay_t<T>>::value &&
-            !std::is_same<UniversalSet, std::decay_t<T>>::value &&
-            !std::is_same<All<void>, std::decay_t<T>>::value,
+            std::is_integral<T>::value &&
+            std::is_signed<T>::value,
             bool
         > = true
     >
-    auto operator&&(const T&, const All<void>& rhs) {
-        return rhs;
+    auto all(void) {
+        return Integers();
     }
 
     template<
         class T,
-        std::enable_if_t<
-            std::is_base_of<MeasurableSet, std::decay_t<T>>::value &&
-            !std::is_same<UniversalSet, std::decay_t<T>>::value,
-            bool
-        > = true
+        std::enable_if_t<std::is_floating_point<T>::value, bool> = true
     >
-    auto operator||(const All<void>&, const T& rhs) {
-        return rhs;
-    }
-
-    template<
-        class T,
-        std::enable_if_t<
-            std::is_base_of<MeasurableSet, std::decay_t<T>>::value &&
-            !std::is_same<UniversalSet, std::decay_t<T>>::value &&
-            !std::is_same<All<void>, std::decay_t<T>>::value,
-            bool
-        > = true
-    >
-    auto operator||(const T& lhs, const All<void>&) {
-        return lhs;
+    auto all(void) {
+        return RealNumbers();
     }
 
     // For unknown types, output the simplest function call that would produce the set.
@@ -150,53 +100,6 @@ namespace libp {
         os << "all<unknown type>()";
         return os;
     }
-
-    // Output the latex character \varnothing for T void, so All<void> represents
-    // the null set.
-    inline std::ostream& operator<<(std::ostream& os, const All<void>&) {
-        os << u8"\u2205"; // This is UTF-8 for the latex character \varnothing.
-        return os;
-    }
-
-    // Output the latex character \mathbb{N} for T representing the naturals.
-    template<
-        class T,
-        std::enable_if_t<
-            std::is_integral<T>::value && std::is_unsigned<T>::value,
-            bool
-        > = true
-    >
-    inline std::ostream& operator<<(std::ostream& os, const All<T>&) {
-        os << u8"\u2115"; // This is UTF-8 for the latex character \mathbb{N}.
-        return os;
-    }
-
-    // Output the latex character \mathbb{Z} for T representing the integers.
-    template<
-        class T,
-        std::enable_if_t<
-            std::is_integral<T>::value && std::is_signed<T>::value,
-            bool
-        > = true
-    >
-    inline std::ostream& operator<<(std::ostream& os, const All<T>&) {
-        os << u8"\u2124"; // This is UTF-8 for the latex character \mathbb{Z}.
-        return os;
-    }
-
-    // Output the latex character \mathbb{R} for T representing the reals.
-    template<
-        class T,
-        std::enable_if_t<
-            std::is_floating_point<T>::value,
-            bool
-        > = true
-    >
-    inline std::ostream& operator<<(std::ostream& os, const All<T>&) {
-        os << u8"\u211D"; // This is UTF-8 for the latex character \mathbb{Z}.
-        return os;
-    }
-
 
 };
 

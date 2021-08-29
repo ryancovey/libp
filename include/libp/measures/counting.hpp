@@ -5,9 +5,11 @@
 #include <limits>
 #include <libp/internal/constants.hpp>
 #include <libp/measures/measure.hpp>
-#include <libp/sets/all.hpp>
-#include <libp/sets/universal.hpp>
 #include <libp/sets/finite.hpp>
+#include <libp/sets/integers.hpp>
+#include <libp/sets/natural_numbers.hpp>
+#include <libp/sets/real_numbers.hpp>
+#include <libp/sets/universal.hpp>
 
 namespace libp {
 
@@ -26,16 +28,16 @@ namespace libp {
                 return infinity<Codomain>();
             }
 
-            template<
-                class T,
-                std::enable_if_t<std::is_arithmetic<T>::value, bool> = true
-            >
-            auto operator()(const All<T>&) {
+            auto operator()(const NaturalNumbers&) {
                 return infinity<Codomain>();
             }
 
-            auto operator()(const All<void>&) {
-                return zero<Codomain>();
+            auto operator()(const Integers&) {
+                return infinity<Codomain>();
+            }
+
+            auto operator()(const RealNumbers&) {
+                return infinity<Codomain>();
             }
 
             template<class T, template<class, class...> class C>
