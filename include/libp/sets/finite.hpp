@@ -96,12 +96,12 @@ namespace libp {
             template<
                 class RT,
                 std::enable_if_t<
-                    (std::is_arithmetic<T>::value && std::is_floating_point<RT>::value) ||  // RT are the reals
+                    (std::is_unsigned<T>::value && std::is_arithmetic<RT>::value) ||        // T represents naturals.
                     (
-                        std::is_integral<T>::value && !std::is_signed<T>::value &&          // T and RT are the integers.
-                        std::is_integral<RT>::value && !std::is_signed<RT>::value
+                        std::is_integral<T>::value && std::is_signed<T>::value &&           // T and RT represent integers.
+                        std::is_integral<RT>::value && std::is_signed<RT>::value
                     ) ||
-                    (std::is_signed<T>::value && std::is_arithmetic<RT>::value),            // T are the naturals and zero.
+                    (std::is_arithmetic<T>::value && std::is_floating_point<RT>::value),    // RT represents reals.
                     bool
                 > = true
             >
@@ -109,13 +109,13 @@ namespace libp {
                 return *this;
             }
 
-            // If *this is a subset of the integers and all<RT>() contains the naturals and zero,
+            // If *this is a subset of the integers and all<RT>() contains the naturals,
             // then *this && all<RT>() contain all elements of *this that are >= 0.
             template<
                 class RT,
                 std::enable_if_t<
-                    std::is_integral<T>::value && std::is_unsigned<T>::value &&
-                    std::is_integral<RT>::value && std::is_signed<RT>::value,
+                    std::is_integral<T>::value && std::is_signed<T>::value &&   // T represents integers.
+                    std::is_integral<RT>::value && std::is_unsigned<RT>::value, // RT represents naturals.
                     bool
                 > = true
             >
@@ -135,8 +135,8 @@ namespace libp {
             template<
                 class RT,
                 std::enable_if_t<
-                    std::is_floating_point<T>::value &&
-                    std::is_signed<RT>::value,
+                    std::is_floating_point<T>::value && // T represents reals.
+                    std::is_unsigned<RT>::value,        // RT represents naturals.
                     bool
                 > = true
             >
@@ -156,8 +156,8 @@ namespace libp {
             template<
                 class RT,
                 std::enable_if_t<
-                    std::is_floating_point<T>::value &&
-                    std::is_integral<RT>::value && std::is_signed<RT>::value,
+                    std::is_floating_point<T>::value &&                         // T represents reals.
+                    std::is_integral<RT>::value && std::is_signed<RT>::value,   // RT represents integers.
                     bool
                 > = true
             >
@@ -203,10 +203,10 @@ namespace libp {
                 std::enable_if_t<
                     (std::is_arithmetic<T>::value && std::is_floating_point<RT>::value) ||  // RT are the reals
                     (
-                        std::is_integral<T>::value && !std::is_signed<T>::value &&          // T and RT are the integers.
-                        std::is_integral<RT>::value && !std::is_signed<RT>::value
+                        std::is_integral<T>::value && std::is_signed<T>::value &&           // T and RT are the integers.
+                        std::is_integral<RT>::value && std::is_signed<RT>::value
                     ) ||
-                    (std::is_signed<T>::value && std::is_arithmetic<RT>::value),            // T are the naturals and zero.
+                    (std::is_unsigned<T>::value && std::is_arithmetic<RT>::value),            // T are the naturals and zero.
                     bool
                 > = true
             >

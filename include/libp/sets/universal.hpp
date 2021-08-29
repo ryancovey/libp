@@ -7,14 +7,11 @@
 
 namespace libp {
 
-    class UniversalSet : public MeasurableSetCRTP<UniversalSet> { };
+    class UniversalSet final : public MeasurableSetCRTP<UniversalSet> { };
 
     template<
         class T,
-        std::enable_if_t<
-            std::is_base_of<MeasurableSet, std::decay_t<T>>::value,
-            bool
-        > = true
+        std::enable_if_t<std::is_base_of<MeasurableSet, std::decay_t<T>>::value, bool> = true
     >
     auto operator&&(const UniversalSet&, const T& rhs) {
         return rhs;
@@ -23,7 +20,8 @@ namespace libp {
     template<
         class T,
         std::enable_if_t<
-            std::is_base_of<MeasurableSet, std::decay_t<T>>::value,
+            std::is_base_of<MeasurableSet, std::decay_t<T>>::value &&
+            !std::is_same<UniversalSet, std::decay_t<T>>::value,
             bool
         > = true
     >
@@ -33,10 +31,7 @@ namespace libp {
 
     template<
         class T,
-        std::enable_if_t<
-            std::is_base_of<MeasurableSet, std::decay_t<T>>::value,
-            bool
-        > = true
+        std::enable_if_t<std::is_base_of<MeasurableSet, std::decay_t<T>>::value, bool> = true
     >
     auto operator||(const UniversalSet& lhs, const T&) {
         return lhs;
@@ -45,7 +40,8 @@ namespace libp {
     template<
         class T,
         std::enable_if_t<
-            std::is_base_of<MeasurableSet, std::decay_t<T>>::value,
+            std::is_base_of<MeasurableSet, std::decay_t<T>>::value &&
+            !std::is_same<UniversalSet, std::decay_t<T>>::value,
             bool
         > = true
     >
