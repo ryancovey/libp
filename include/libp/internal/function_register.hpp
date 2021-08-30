@@ -22,15 +22,25 @@ namespace libp { inline namespace internal {
         using IndexType = typename std::vector<FunctionType>::size_type
 
         public:
-            FunctionRegister(): argument_index_sizes{} { }
+            FunctionRegister():
+                argument_index_sizes{},
+                default_function{}
+            { }
 
-            explicit FunctionRegister(const std::array<IndexType, Arity>& argument_index_sizes_in):
-                functions([&]() {
-                    IndexType functions_size = 1;
-                    for (auto s : argument_index_sizes_in) { functions_size *= s; }
-                    return s;
-                }()),
-                argument_index_sizes(argument_index_sizes_in)
+            FunctionRegister(
+                const std::array<IndexType, Arity>& argument_index_sizes_in,
+                FunctionType default_function_in = FunctionType{}
+            ):
+                argument_index_sizes(argument_index_sizes_in),
+                default_function(std::move(default_function_in)),
+                functions(
+                    [&]() {
+                        IndexType functions_size = 1;
+                        for (auto s : argument_index_sizes) { functions_size *= s; }
+                        return s;
+                    }(),
+                    default_function
+                )
             { }
 
             template<class F>
@@ -44,24 +54,44 @@ namespace libp { inline namespace internal {
             template<class F, class... Args>
             auto execute_function(const std::array<IndexType, Arity>& argument_indices, Args&&... args) {
                 auto function_index = get_function_index(argument_index_sizes, argument_indices);
-                assert(function_index < functions.size());
-                return functions[function_index](std::forward<Args>(args)...);
+                if (function_index < functions.size()) {
+                    return functions[function_index](std::forward<Args>(args)...);
+                } else {
+                    return default_function(std::forward<Args>(args)...);
+                }
             }
 
         private:
-            std::vector<FunctionType> functions;
             std::array<IndexType, Arity> argument_index_sizes;
+            FuntionType default_function;
+            std::vector<FunctionType> functions;
 
             void expand_storage_if_out_of_bounds(const std::array<IndexType, Arity>& argument_indices) {
-                for (IndexType i = 0; i != Arity; ++i) {
+                auto get_storage_supply = [&](IndexType j) {
+                    IndexType new_argument_index_sizes_j = argument_index_sizes[j];
+                    while(argument_indices[j] >= new_argument_index_sizes_j) {
+                        // Increase storage supply by a factor of two along each dimension
+                        // each time an increase is needed, to avoid having to expand often.
+                        new_argument_index_size_j *= 2;
+                    }
+                    return new_argument_index_sizes_j;
+                };
+
+                // Less work needs to be done if only the first argument index size changes,
+                // so check all the other argument indices first.
+                for (IndexType i = 1; i < Arity; ++i) {
                     if (argument_indices[i] >= argument_index_sizes[i]) {
                         std::array<IndexType, Arity> new_argument_index_sizes;
                         for (IndexType j = 0; j != Arity; ++j) {
-                            new_argument_index_sizes[j] = std::max(argument_indices[j] + 1, argument_index_sizes[i]);
+                            new_argument_index_sizes[j] = get_storage_supply(j);
                         }
                         expand_storage(new_argument_index_sizes);
                         return;
                     }
+                }
+
+                if (argument_indices[0] >= argument_index_sizes[0]) {
+                    expand_storage(get_storage_supply(0));
                 }
             }
 
@@ -70,7 +100,7 @@ namespace libp { inline namespace internal {
 
                 IndexType new_functions_size = 1;
                 for (auto nais : new_argument_index_sizes) { new_functions_size *= nais; }
-                new_functions.resize(new_functions_size);
+                new_functions.resize(new_functions_size, default_function);
 
                 auto old_functions_size = functions.size();
                 for (std::size_t i = 0; i != old_functions_size; ++i) {
@@ -86,6 +116,18 @@ namespace libp { inline namespace internal {
 
                 std::swap(functions, new_functions);
                 std::swap(argument_index_sizes, new_argument_index_sizes);
+            }
+
+            // An increase in the number of indices on the first argument does not change
+            // the map between argument indices and the function index, so we do not
+            // need to move functions to their new storage locations in this case.
+            void expand_storage(IndexType new_argument_0_index_size) {
+                IndexType new_functions_size = new_argument_0_index_size;
+                for (std::size_t i = 1; i < Arity; ++i) {
+                    new_functions_size *= argument_index_sizes[i];
+                }
+                functions.resize(new_functions_size, default_function);
+                argument_index_sizes[0] = new_argument_0_index_size;
             }
 
             IndexType get_function_index(
