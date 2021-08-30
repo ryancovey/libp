@@ -4,7 +4,7 @@
 #include <type_traits>
 #include <libp/internal/constants.hpp>
 #include <libp/measures/measure.hpp>
-#include <libp/sets/measurable_set.hpp>
+#include <libp/sets/measurable_set_impl.hpp>
 #include <libp/sets/real_numbers.hpp>
 #include <libp/sets/universal.hpp>
 
@@ -15,7 +15,7 @@ namespace libp {
         public:
             template<
                 class SetType,
-                std::enable_if_t<std::is_base_of<MeasurableSet, std::decay_t<SetType>>::value, bool> = true
+                std::enable_if_t<std::is_base_of<MeasurableSetImpl, std::decay_t<SetType>>::value, bool> = true
             >
             auto operator()(const SetType&) {
                 return zero<Codomain>();

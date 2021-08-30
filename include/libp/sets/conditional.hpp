@@ -3,7 +3,7 @@
 
 #include <type_traits>
 #include <utility>
-#include <libp/sets/measurable_set.hpp>
+#include <libp/sets/measurable_set_impl.hpp>
 
 namespace libp {
 
@@ -11,8 +11,8 @@ namespace libp {
         class UnconditionalSetType,
         class ConditioningSetType,
         typename = std::enable_if_t<
-            std::is_base_of<MeasurableSet, std::decay_t<UnconditionalSetType>>::value &&
-            std::is_base_of<MeasurableSet, std::decay_t<ConditioningSetType>>::value
+            std::is_base_of<MeasurableSetImpl, std::decay_t<UnconditionalSetType>>::value &&
+            std::is_base_of<MeasurableSetImpl, std::decay_t<ConditioningSetType>>::value
         >
     >
     struct ConditionalSet {

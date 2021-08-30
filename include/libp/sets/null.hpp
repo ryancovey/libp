@@ -3,7 +3,7 @@
 
 #include <ostream>
 #include <type_traits>
-#include <libp/sets/measurable_set.hpp>
+#include <libp/sets/measurable_set_impl.hpp>
 #include <libp/sets/universal.hpp>
 
 namespace libp {
@@ -13,7 +13,7 @@ namespace libp {
     template<
         class T,
         std::enable_if_t<
-            std::is_base_of<MeasurableSet, std::decay_t<T>>::value &&
+            std::is_base_of<MeasurableSetImpl, std::decay_t<T>>::value &&
             !std::is_same<UniversalSet, std::decay_t<T>>::value,
             bool
         > = true
@@ -25,7 +25,7 @@ namespace libp {
     template<
         class T,
         std::enable_if_t<
-            std::is_base_of<MeasurableSet, std::decay_t<T>>::value &&
+            std::is_base_of<MeasurableSetImpl, std::decay_t<T>>::value &&
             !std::is_same<UniversalSet, std::decay_t<T>>::value &&
             !std::is_same<NullSet, std::decay_t<T>>::value,
             bool
@@ -38,7 +38,7 @@ namespace libp {
     template<
         class T,
         std::enable_if_t<
-            std::is_base_of<MeasurableSet, std::decay_t<T>>::value &&
+            std::is_base_of<MeasurableSetImpl, std::decay_t<T>>::value &&
             !std::is_same<UniversalSet, std::decay_t<T>>::value,
             bool
         > = true
@@ -50,7 +50,7 @@ namespace libp {
     template<
         class T,
         std::enable_if_t<
-            std::is_base_of<MeasurableSet, std::decay_t<T>>::value &&
+            std::is_base_of<MeasurableSetImpl, std::decay_t<T>>::value &&
             !std::is_same<UniversalSet, std::decay_t<T>>::value &&
             !std::is_same<NullSet, std::decay_t<T>>::value,
             bool

@@ -2,7 +2,7 @@
 #define LIBP_SETS_REAL_NUMBERS_HPP_GUARD
 
 #include <ostream>
-#include <libp/sets/measurable_set.hpp>
+#include <libp/sets/measurable_set_impl.hpp>
 
 namespace libp {
 

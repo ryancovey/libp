@@ -13,7 +13,7 @@
 #include <libp/sets/all.hpp>
 #include <libp/sets/conditional.hpp>
 #include <libp/sets/integers.hpp>
-#include <libp/sets/measurable_set.hpp>
+#include <libp/sets/measurable_set_impl.hpp>
 #include <libp/sets/natural_numbers.hpp>
 #include <libp/sets/none.hpp>
 
@@ -49,7 +49,7 @@ namespace libp {
                 class C,
                 std::enable_if_t<
                     !std::is_reference<C>::value && // Disable constructor for lvalue arguments.
-                    !std::is_base_of<MeasurableSet, std::decay_t<C>>::value,
+                    !std::is_base_of<MeasurableSetImpl, std::decay_t<C>>::value,
                     bool
                 > = true
             >
@@ -59,12 +59,12 @@ namespace libp {
                 make_sorted_unique(storage);
             }
 
-            // If a MeasurableSet of objects not of a similar type to T participates in an intersection
-            // with this FiniteSet, clearly none of the elements represented in the former MeasurableSet
+            // If a MeasurableSetImpl of objects not of a similar type to T participates in an intersection
+            // with this FiniteSet, clearly none of the elements represented in the former MeasurableSetImpl
             // can be present in the latter.
             template<
                 class R,
-                std::enable_if_t<std::is_base_of<MeasurableSet, std::decay_t<R>>::value, bool> = true
+                std::enable_if_t<std::is_base_of<MeasurableSetImpl, std::decay_t<R>>::value, bool> = true
             >
             auto operator&&(const R&) const {
                 return none();

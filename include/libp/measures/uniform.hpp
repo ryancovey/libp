@@ -12,14 +12,14 @@
 #include <libp/measures/measure.hpp>
 #include <libp/sets/conditional.hpp>
 #include <libp/sets/finite.hpp>
-#include <libp/sets/measurable_set.hpp>
+#include <libp/sets/measurable_set_impl.hpp>
 
 namespace libp {
 
     template<
         class SampleSpaceType,
         class Codomain = double,
-        typename = std::enable_if_t<std::is_base_of<MeasurableSet, std::decay_t<SampleSpaceType>>::value>
+        typename = std::enable_if_t<std::is_base_of<MeasurableSetImpl, std::decay_t<SampleSpaceType>>::value>
     >
     class UniformDistribution : public Measure {
         public:
@@ -29,7 +29,7 @@ namespace libp {
 
             template<
                 class EventType,
-                typename = std::enable_if_t<std::is_base_of<MeasurableSet, std::decay_t<EventType>>::value>
+                typename = std::enable_if_t<std::is_base_of<MeasurableSetImpl, std::decay_t<EventType>>::value>
             >
             Codomain operator()(const EventType& event) {
                 auto NS = counting_measure(sample_space);
