@@ -7,7 +7,11 @@
 #include <libp/sets/all.hpp>
 #include <libp/sets/conditional.hpp>
 #include <libp/sets/finite.hpp>
+#include <libp/sets/integers.hpp>
+#include <libp/sets/natural_numbers.hpp>
 #include <libp/sets/none.hpp>
+#include <libp/sets/null.hpp>
+#include <libp/sets/real_numbers.hpp>
 #include <libp/sets/universal.hpp>
 
 #endif

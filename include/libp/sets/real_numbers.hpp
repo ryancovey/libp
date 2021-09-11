@@ -6,18 +6,7 @@
 
 namespace libp {
 
-    class NaturalNumbers;
-    class Integers;
-
-    class RealNumbers final : public MeasurableSetCRTP<RealNumbers> {
-        public:
-            inline NaturalNumbers operator&&(const NaturalNumbers&) const;
-            inline RealNumbers operator||(const NaturalNumbers&) const;
-            inline Integers operator&&(const Integers&) const;
-            inline RealNumbers operator||(const Integers&) const;
-            inline RealNumbers operator&&(const RealNumbers&) const;
-            inline RealNumbers operator||(const RealNumbers&) const;
-    };
+    class RealNumbers final : public MeasurableSetCRTP<RealNumbers> { };
 
 }
 
@@ -26,28 +15,20 @@ namespace libp {
 
 namespace libp {
 
-    NaturalNumbers RealNumbers::operator&&(const NaturalNumbers& rhs) const {
+    inline auto operator&&(const RealNumbers&, const NaturalNumbers& rhs) {
         return rhs;
     }
 
-    RealNumbers RealNumbers::operator||(const NaturalNumbers&) const {
-        return *this;
+    inline auto operator||(const RealNumbers& lhs, const NaturalNumbers&) {
+        return lhs;
     }
 
-    Integers RealNumbers::operator&&(const Integers& rhs) const {
+    inline auto operator&&(const RealNumbers&, const Integers& rhs) {
         return rhs;
     }
 
-    RealNumbers RealNumbers::operator||(const Integers&) const {
-        return *this;
-    }
-
-    RealNumbers RealNumbers::operator&&(const RealNumbers&) const {
-        return *this;
-    }
-
-    RealNumbers RealNumbers::operator||(const RealNumbers&) const {
-        return *this;
+    inline auto operator||(const RealNumbers& lhs, const Integers&) {
+        return lhs;
     }
 
     std::ostream& operator<<(std::ostream& os, const RealNumbers&) {

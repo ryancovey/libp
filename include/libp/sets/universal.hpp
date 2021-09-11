@@ -11,7 +11,11 @@ namespace libp {
 
     template<
         class T,
-        std::enable_if_t<std::is_base_of<MeasurableSetImpl, std::decay_t<T>>::value, bool> = true
+        std::enable_if_t<
+            std::is_base_of<MeasurableSetImpl, std::decay_t<T>>::value &&
+            !std::is_same<UniversalSet, std::decay_t<T>>::value,
+            bool
+        > = true
     >
     auto operator&&(const UniversalSet&, const T& rhs) {
         return rhs;
@@ -31,7 +35,11 @@ namespace libp {
 
     template<
         class T,
-        std::enable_if_t<std::is_base_of<MeasurableSetImpl, std::decay_t<T>>::value, bool> = true
+        std::enable_if_t<
+            std::is_base_of<MeasurableSetImpl, std::decay_t<T>>::value &&
+            !std::is_same<UniversalSet, std::decay_t<T>>::value,
+            bool
+        > = true
     >
     auto operator||(const UniversalSet& lhs, const T&) {
         return lhs;

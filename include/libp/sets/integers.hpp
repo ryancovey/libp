@@ -2,22 +2,12 @@
 #define LIBP_SETS_INTEGERS_HPP_GUARD
 
 #include <ostream>
+#include <type_traits>
 #include <libp/sets/measurable_set_impl.hpp>
 
 namespace libp {
 
-    class NaturalNumbers;
-    class RealNumbers;
-
-    class Integers final : public MeasurableSetCRTP<Integers> {
-        public:
-            inline NaturalNumbers operator&&(const NaturalNumbers&) const;
-            inline Integers operator||(const NaturalNumbers&) const;
-            inline Integers operator&&(const Integers&) const;
-            inline Integers operator||(const Integers&) const;
-            inline Integers operator&&(const RealNumbers&) const;
-            inline RealNumbers operator||(const RealNumbers&) const;
-    };
+    class Integers final : public MeasurableSetCRTP<Integers> { };
 
 }
 
@@ -26,31 +16,23 @@ namespace libp {
 
 namespace libp {
 
-    NaturalNumbers Integers::operator&&(const NaturalNumbers& rhs) const {
+    inline auto operator&&(const Integers&, const NaturalNumbers& rhs) {
         return rhs;
     }
 
-    Integers Integers::operator||(const NaturalNumbers&) const {
-        return *this;
+    inline auto operator||(const Integers& lhs, const NaturalNumbers&) {
+        return lhs;
     }
 
-    Integers Integers::operator&&(const Integers&) const {
-        return *this;
+    inline auto operator&&(const Integers& lhs, const RealNumbers&) {
+        return lhs;
     }
 
-    Integers Integers::operator||(const Integers&) const {
-        return *this;
-    }
-
-    Integers Integers::operator&&(const RealNumbers&) const {
-        return *this;
-    }
-
-    RealNumbers Integers::operator||(const RealNumbers& rhs) const {
+    inline auto operator||(const Integers&, const RealNumbers& rhs) {
         return rhs;
     }
 
-    std::ostream& operator<<(std::ostream& os, const Integers&) {
+    inline std::ostream& operator<<(std::ostream& os, const Integers&) {
         os << u8"\u2124"; // This is UTF-8 for the latex character \mathbb{Z}.
         return os;
     }

@@ -6,18 +6,7 @@
 
 namespace libp {
 
-    class Integers;
-    class RealNumbers;
-
-    class NaturalNumbers final : public MeasurableSetCRTP<NaturalNumbers> {
-        public:
-            inline NaturalNumbers operator&&(const NaturalNumbers&) const;
-            inline NaturalNumbers operator||(const NaturalNumbers&) const;
-            inline NaturalNumbers operator&&(const Integers&) const;
-            inline Integers operator||(const Integers&) const;
-            inline NaturalNumbers operator&&(const RealNumbers&) const;
-            inline RealNumbers operator||(const RealNumbers& rhs) const;
-    };
+    class NaturalNumbers final : public MeasurableSetCRTP<NaturalNumbers> { };
 
 }
 
@@ -26,27 +15,19 @@ namespace libp {
 
 namespace libp {
 
-    NaturalNumbers NaturalNumbers::operator&&(const NaturalNumbers&) const {
-        return *this;
+    inline auto operator&&(const NaturalNumbers& lhs, const Integers&) {
+        return lhs;
     }
 
-    NaturalNumbers NaturalNumbers::operator||(const NaturalNumbers&) const {
-        return *this;
-    }
-
-    NaturalNumbers NaturalNumbers::operator&&(const Integers&) const {
-        return *this;
-    }
-
-    Integers NaturalNumbers::operator||(const Integers& rhs) const {
+    inline auto operator||(const NaturalNumbers&, const Integers& rhs) {
         return rhs;
     }
 
-    NaturalNumbers NaturalNumbers::operator&&(const RealNumbers&) const {
-        return *this;
+    inline auto operator&&(const NaturalNumbers& lhs, const RealNumbers&) {
+        return lhs;
     }
 
-    RealNumbers NaturalNumbers::operator||(const RealNumbers& rhs) const {
+    inline auto operator||(const NaturalNumbers&, const RealNumbers& rhs) {
         return rhs;
     }
 
