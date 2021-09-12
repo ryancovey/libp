@@ -1,7 +1,7 @@
 #include <boost/test/unit_test.hpp>
 #include <libp/libp.hpp>
 
-BOOST_AUTO_TEST_CASE(real_sets_relationships) {
+BOOST_AUTO_TEST_CASE(real_sets_relationships_test) {
     auto O = libp::none();
     auto N = libp::all<unsigned>();
     auto Z = libp::all<int>();

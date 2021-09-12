@@ -4,7 +4,8 @@ cmake_minimum_required(VERSION 3.8 FATAL_ERROR)
 
 if (TARGET boost_test)
     add_executable(tests
-        "sets.cpp"
+        "function_register_test.cpp"
+        "sets_test.cpp"
         "test_main.cpp"
     )
     target_link_libraries(tests
