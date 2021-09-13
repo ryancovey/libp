@@ -59,7 +59,7 @@ namespace libp { inline namespace internal {
                 }
             }
 
-            template<class F, class... Args>
+            template<class... Args>
             auto execute_function(const std::array<IndexType, IndexDimension>& argument_indices, Args&&... args) {
                 auto function_index = get_function_index(argument_index_sizes, argument_indices);
                 if (function_index < functions.size()) {
@@ -118,8 +118,6 @@ namespace libp { inline namespace internal {
                         new_argument_index_sizes,
                         get_argument_indices(argument_index_sizes, old_functions_index)
                     );
-                    //auto new_functions_index = old_functions_index;
-
 
                     std::swap(new_functions[old_functions_index], new_functions[new_functions_index]);
                 }

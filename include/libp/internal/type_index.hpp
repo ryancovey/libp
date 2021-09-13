@@ -6,14 +6,14 @@
 namespace libp { inline namespace internal {
 
     template<class Base, class IndexType = std::size_t>
-    auto reserve_thread_local_index(void) {
-        thread_local IndexType next_index = 0;
+    auto reserve_type_index(void) {
+        static IndexType next_index = 0;
         return next_index++;
     }
 
     template<class Base, class Derived, class IndexType = std::size_t>
-    auto thread_local_index(void) {
-        thread_local IndexType index_derived = reserve_index<Base>();
+    auto get_type_index(void) {
+        static IndexType index_derived = reserve_type_index<Base, IndexType>();
         return index_derived;
     }
 
