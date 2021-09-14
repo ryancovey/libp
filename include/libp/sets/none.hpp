@@ -3,11 +3,5 @@
 
 #include <libp/sets/null.hpp>
 
-namespace libp {
-
-    auto none(void) { return NullSet(); }
-
-}
-
 #endif
 

@@ -2,7 +2,7 @@
 #define LIBP_SETS_NATURAL_NUMBERS_HPP_GUARD
 
 #include <ostream>
-#include <libp/sets/measurable_set_impl.hpp>
+#include <libp/sets/measurable_set.hpp>
 
 namespace libp {
 
@@ -35,6 +35,8 @@ namespace libp {
         os << u8"\u2115"; // This is UTF-8 for the latex character \mathbb{N}.
         return os;
     }
+
+    auto natural_numbers(void) { return NaturalNumbers(); }
 
 }
 

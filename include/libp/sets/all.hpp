@@ -3,7 +3,7 @@
 
 #include <type_traits>
 #include <libp/sets/integers.hpp>
-#include <libp/sets/measurable_set_impl.hpp>
+#include <libp/sets/measurable_set.hpp>
 #include <libp/sets/natural_numbers.hpp>
 #include <libp/sets/null.hpp>
 #include <libp/sets/real_numbers.hpp>

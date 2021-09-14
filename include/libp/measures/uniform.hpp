@@ -12,7 +12,7 @@
 #include <libp/measures/measure.hpp>
 #include <libp/sets/conditional.hpp>
 #include <libp/sets/finite.hpp>
-#include <libp/sets/measurable_set_impl.hpp>
+#include <libp/sets/measurable_set.hpp>
 
 namespace libp {
 

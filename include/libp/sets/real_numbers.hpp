@@ -2,11 +2,14 @@
 #define LIBP_SETS_REAL_NUMBERS_HPP_GUARD
 
 #include <ostream>
-#include <libp/sets/measurable_set_impl.hpp>
+#include <libp/sets/measurable_set.hpp>
 
 namespace libp {
 
-    class RealNumbers final : public MeasurableSetCRTP<RealNumbers> { };
+    class RealNumbers final : public MeasurableSetCRTP<RealNumbers> {
+        public:
+            static void register_type(void);
+    };
 
 }
 
@@ -14,6 +17,10 @@ namespace libp {
 #include <libp/sets/integers.hpp>
 
 namespace libp {
+
+    void RealNumbers::register_type(void) {
+        register_operators<NaturalNumbers, Integers>();
+    }
 
     inline auto operator&&(const RealNumbers&, const NaturalNumbers& rhs) {
         return rhs;
@@ -35,6 +42,8 @@ namespace libp {
         os << u8"\u211D"; // This is UTF-8 for the latex character \mathbb{R}.
         return os;
     }
+
+    auto real_numbers(void) { return RealNumbers(); }
 
 }
 

@@ -3,11 +3,40 @@
 
 #include <ostream>
 #include <type_traits>
-#include <libp/sets/measurable_set_impl.hpp>
 
 namespace libp {
 
-    class NullSet final : public MeasurableSetCRTP<NullSet> { };
+    class MeasurableSet;
+
+    inline namespace internal {
+
+        // Used by measurable_set.hpp.
+        inline MeasurableSet abstract_none(void);
+
+    }
+
+}
+
+#include <libp/sets/measurable_set.hpp>
+
+namespace libp {
+
+    class NullSet final : public MeasurableSetCRTP<NullSet> {
+        public:
+            static void register_type(void) {
+                default_intersection_this();
+                default_union_other();
+            }
+    };
+
+    inline NullSet none(void) { return NullSet(); }
+    inline NullSet null(void) { return NullSet(); }
+
+    inline namespace internal {
+
+        MeasurableSet abstract_none(void) { return NullSet(); }
+
+    }
 
 }
 

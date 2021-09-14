@@ -3,11 +3,14 @@
 
 #include <ostream>
 #include <type_traits>
-#include <libp/sets/measurable_set_impl.hpp>
+#include <libp/sets/measurable_set.hpp>
 
 namespace libp {
 
-    class Integers final : public MeasurableSetCRTP<Integers> { };
+    class Integers final : public MeasurableSetCRTP<Integers> {
+        public:
+            static void register_type(void);
+    };
 
 }
 
@@ -15,6 +18,10 @@ namespace libp {
 #include <libp/sets/real_numbers.hpp>
 
 namespace libp {
+
+    void Integers::register_type(void) {
+        register_operators<NaturalNumbers>();
+    }
 
     inline auto operator&&(const Integers&, const NaturalNumbers& rhs) {
         return rhs;
@@ -36,6 +43,8 @@ namespace libp {
         os << u8"\u2124"; // This is UTF-8 for the latex character \mathbb{Z}.
         return os;
     }
+
+    auto integers(void) { return Integers(); }
 
 }
 

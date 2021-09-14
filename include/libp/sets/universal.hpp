@@ -3,11 +3,17 @@
 
 #include <ostream>
 #include <type_traits>
-#include <libp/sets/measurable_set_impl.hpp>
+#include <libp/sets/measurable_set.hpp>
 
 namespace libp {
 
-    class UniversalSet final : public MeasurableSetCRTP<UniversalSet> { };
+    class UniversalSet final : public MeasurableSetCRTP<UniversalSet> {
+        public:
+            static void register_type(void) {
+                default_intersection_other();
+                default_union_this();
+            }
+    };
 
     template<
         class T,

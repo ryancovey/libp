@@ -4,7 +4,7 @@
 #include <type_traits>
 #include <libp/internal/constants.hpp>
 #include <libp/measures/measure.hpp>
-#include <libp/sets/measurable_set_impl.hpp>
+#include <libp/sets/measurable_set.hpp>
 #include <libp/sets/real_numbers.hpp>
 #include <libp/sets/universal.hpp>
 

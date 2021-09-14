@@ -50,6 +50,15 @@ namespace libp { inline namespace internal {
                 functions[get_function_index(argument_index_sizes, argument_indices)] = std::forward<F>(fn);
             }
 
+            auto get_function(const std::array<IndexType, IndexDimension>& argument_indices) {
+                auto function_index = get_function_index(argument_index_sizes, argument_indices);
+                if (function_index < functions.size()) {
+                    return functions[function_index];
+                } else {
+                    return default_function;
+                }
+            }
+
             auto execute_function(const std::array<IndexType, IndexDimension>& argument_indices) {
                 auto function_index = get_function_index(argument_index_sizes, argument_indices);
                 if (function_index < functions.size()) {

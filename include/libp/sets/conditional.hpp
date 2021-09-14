@@ -3,7 +3,7 @@
 
 #include <type_traits>
 #include <utility>
-#include <libp/sets/measurable_set_impl.hpp>
+#include <libp/sets/measurable_set.hpp>
 
 namespace libp {
 
