@@ -20,7 +20,7 @@ namespace libp {
 namespace libp {
 
     void Integers::register_type(void) {
-        register_operators<NaturalNumbers>();
+        register_operators<NaturalNumbers,RealNumbers>();
     }
 
     inline auto operator&&(const Integers&, const NaturalNumbers& rhs) {

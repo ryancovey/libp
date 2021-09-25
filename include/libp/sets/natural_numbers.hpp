@@ -6,7 +6,10 @@
 
 namespace libp {
 
-    class NaturalNumbers final : public MeasurableSetCRTP<NaturalNumbers> { };
+    class NaturalNumbers final : public MeasurableSetCRTP<NaturalNumbers> {
+        public:
+            static void register_type(void);
+    };
 
 }
 
@@ -14,6 +17,11 @@ namespace libp {
 #include <libp/sets/real_numbers.hpp>
 
 namespace libp {
+
+    void NaturalNumbers::register_type(void) {
+        register_operators<Integers, RealNumbers>();
+    }
+
 
     inline auto operator&&(const NaturalNumbers& lhs, const Integers&) {
         return lhs;

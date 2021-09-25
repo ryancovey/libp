@@ -23,6 +23,9 @@ namespace libp {
 
     template<class T>
     class MeasurableSetCRTP : public MeasurableSetImpl {
+        template<class U>
+        friend class MeasurableSetCRTP;
+
         friend class MeasurableSet;
 
         public:
@@ -52,7 +55,25 @@ namespace libp {
             // statically, before main runs, and not after.
             static std::size_t type_index;
             static std::size_t get_type_index(void);
+
+            // Due to implicit instantiation rules (see https://en.cppreference.com/w/cpp/language/class_template), this
+            // type is only registered (via a call to get_type_index during static initialisation) if type_index is used
+            // somewhere, and it is only used by MeasurableSet::MeasurableSet<T>. By setting type_registered to false at
+            // instantiation and true in get_type_index, we can query MeasurableSetCRTP<U>::type_registered in
+            // MeasurableSetCRTP<T>::register_operators<U> and only register operators between arguments of type T and U
+            // when U has already been registered and T is being registered. We therefore need to call register_operators<U>()
+            // in T::register_type() (to cover the case that U is registered before T) and call register_operators<T>()
+            // in U::register_type() (ro cover the case that T is registered before U). The benefit of this approach is that
+            // operators between sets of type U and T are registered if and only if objects of type U and T are used to
+            // construct a MeasurableSet object somewhere in the program.
+            static bool type_registered;
     };
+
+    template<class T>
+    std::size_t MeasurableSetCRTP<T>::type_index = get_type_index();
+
+    template<class T>
+    bool MeasurableSetCRTP<T>::type_registered = false;
 
     inline namespace internal {
 
@@ -288,7 +309,7 @@ namespace libp {
     template<class T>
     template<class U1>
     void MeasurableSetCRTP<T>::register_operators(void) {
-        MeasurableSet::register_operators<T,U1>();
+        if (MeasurableSetCRTP<U1>::type_registered) MeasurableSet::register_operators<T,U1>();
     }
 
     template<class T>
@@ -301,11 +322,10 @@ namespace libp {
     template<class T>
     std::size_t MeasurableSetCRTP<T>::get_type_index(void) {
         T::register_type();
-        return MeasurableSet::register_operators<T>();
+        auto type_idx = MeasurableSet::register_operators<T>();
+        MeasurableSetCRTP<T>::type_registered = true;
+        return type_idx;
     }
-
-    template<class T>
-    std::size_t MeasurableSetCRTP<T>::type_index = get_type_index();
 
     template<
         class T,
