@@ -441,13 +441,24 @@ namespace libp {
         register_operators<U2, Us...>();
     }
 
+    inline namespace internal {
+
+        // Used only by MeasurableSetCRTP<T>::get_registered_type_index immediately below.
+        inline auto& get_registered_types_register_type(void) {
+            static auto& registered_types_register_type = *new std::vector<void(*)(std::size_t)>();
+            return registered_types_register_type;
+        }
+
+    }
+
     template<class T>
     std::size_t MeasurableSetCRTP<T>::get_registered_type_index(void) {
-        static auto& registered_types_register_type = *new std::vector<void(*)(std::size_t)>();
+        assert(!type_registered);                               // We intend this function to be called once per T.
         register_type();                                        // Register defaults.
         register_type(std::numeric_limits<std::size_t>::max()); // Register non-defaults.
         auto type_idx = MeasurableSet::register_operators<T>();
-        MeasurableSetCRTP<T>::type_registered = true;
+        type_registered = true;                                 // reg(type_idx) below relies on this.
+        auto& registered_types_register_type = get_registered_types_register_type();
         for (auto reg : registered_types_register_type) { reg(type_idx); }
         registered_types_register_type.push_back(&register_type);
         return type_idx;
