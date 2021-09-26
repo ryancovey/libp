@@ -9,7 +9,7 @@ namespace libp {
 
     class Integers final : public MeasurableSetCRTP<Integers> {
         public:
-            static void register_type(void);
+            static void register_type(std::size_t);
     };
 
 }
@@ -19,8 +19,8 @@ namespace libp {
 
 namespace libp {
 
-    void Integers::register_type(void) {
-        register_operators<NaturalNumbers,RealNumbers>();
+    void Integers::register_type(std::size_t i) {
+        register_operators<NaturalNumbers>(i);
     }
 
     inline auto operator&&(const Integers&, const NaturalNumbers& rhs) {
