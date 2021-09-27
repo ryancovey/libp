@@ -13,10 +13,16 @@
 
 namespace libp {
 
-    class MeasurableSet;
+    // See comments at the top of the definition to MeasurableSetHandler below
+    // for an explanation for the dummy template argument.
+
+    template<bool Dummy>
+    class MeasurableSetHandler;
+
+    using MeasurableSet = MeasurableSetHandler<true>;
 
     class MeasurableSetImpl {
-        friend class MeasurableSet;
+        friend MeasurableSet;
 
         public:
             virtual ~MeasurableSetImpl() = default;
@@ -53,7 +59,7 @@ namespace libp {
         template<class U>
         friend class MeasurableSetCRTP;
 
-        friend class MeasurableSet;
+        friend MeasurableSet;
 
         protected:
             static void default_intersection_this(void);
@@ -71,14 +77,14 @@ namespace libp {
         private:
             // If T::register_type(void) exists, call it in MeasurableSetCRTP<T>::register_type(void),
             // otherwise MeasurableSetCRTP<T>::register_type(void) is a noop.
-            static void register_type(std::true_type) { T::register_type(); }
-            static void register_type(std::false_type) { }
-            static void register_type(void) { register_type(has_register_type_t<T, void(void)>()); }
+            static void maybe_register_type(std::true_type) { T::register_type(); }
+            static void maybe_register_type(std::false_type) { }
+            static void maybe_register_type(void) { maybe_register_type(has_register_type_t<T, void(void)>()); }
 
             // As above, but for T::register_type(std::size_t).
-            static void register_type(std::size_t i, std::true_type) { T::register_type(i); }
-            static void register_type(std::size_t, std::false_type) { }
-            static void register_type(std::size_t i) { register_type(i, has_register_type_t<T, void(std::size_t)>()); }
+            static void maybe_register_type(std::size_t i, std::true_type) { T::register_type(i); }
+            static void maybe_register_type(std::size_t, std::false_type) { }
+            static void maybe_register_type(std::size_t i) { maybe_register_type(i, has_register_type_t<T, void(std::size_t)>()); }
 
             template<class U1>
             static void register_one_operator(std::size_t type_index);
@@ -120,12 +126,43 @@ namespace libp {
         inline MeasurableSet get_this_set(const MeasurableSet& this_set, const MeasurableSet& other_set);
         inline MeasurableSet get_other_set(const MeasurableSet& this_set, const MeasurableSet& other_set);
 
-        // Defined in libp/sets/null.hpp, included below.
-        inline MeasurableSet abstract_none(void);
-
     }
 
-    class MeasurableSet {
+    template<bool Dummy = true>
+    class MeasurableSetHandler {
+        // We need this class to be a template to take advantage of implicit instantiation rules applicable to class
+        // templates, but not ordinary classes (see https://en.cppreference.com/w/cpp/language/class_template). In
+        // particular, functions and static member variables of template classes that are not used are not instantiated.
+        // This means that, to a first approximation, function calls used to initialise static member variables of
+        // template classes are run (and hence their side effects occur) if and only if the resulting program actually
+        // depends on the function call or static member variable in question.
+        //
+        // The key static member variable here is MeasurableSetCRTP<std::decay_t<T>>>::register_type_index and is
+        // referred to in the public constructor of MeasurableSetHandler. This variable is initialised by a call to
+        // get_registered_type_index, which does the work of registering std::decay_t<T> for multiple dispatch. Thus,
+        // registration of std::decay_t<T> for multiple dispatch occurs if and only if the constructor
+        // MeasurableSetHandler::MeasurableSetHandler<T> is used, which occurs if and only if a MeasurableSetHandler
+        // is constructed somewhere in the program with a set of type std::decay_t<T>. By only refering to the variable
+        // MeasurableSetCRTP<std::decay_t<T>>::registered_type_index in the public constructor of MeasurableSetHandler,
+        // we can ensure that std::decay_t<T> is not registered for multiple dispatch when the program does not use
+        // MeasurableSetHandler to hold a set of type std::decay_t<T>.
+        // 
+        // If MeasurableSetHandler were not a template, then MeasurableSetHandler::operator&& could be instantiated
+        // even if it is not used, which for the call "lhs && rhs" returns a MeasurableSetHandler holding a NullSet
+        // if lhs and rhs are otherwise unrelated. This triggers the registration of NullSet for multiple dispatch.
+        // That this would occur even for programs that don't use MeasurableSetHandler at all is a violation of the
+        // C++ maxim: "You don't pay for what you don't use." Fortunately, we can avoid this redundant registration
+        // by making MeasurableSetHandler a template class with a dummy template argument, and defining an alias
+        // declaration MeasurableSet that resolves to an instantiation of the class MeasurableSetHandler with the
+        // (unique) correct template argument. With this fix, programs that don't use MeasurableSetHandler at all
+        // don't incur the cost of registering NullSet for multiple dispatch.
+
+        static_assert(
+            Dummy,
+            "MeasuarbleSetHandler<false> undefined, use MeasurableSet, which is an alias for MeasurableSetHandler<true>. "
+            "The template argument is a dummy."
+        );
+
         template<class T>
         friend class MeasurableSetCRTP;
 
@@ -145,22 +182,12 @@ namespace libp {
                     bool
                 > = true
             >
-            MeasurableSet(T&& set):
-                MeasurableSet(std::forward<T>(set), MeasurableSetCRTP<std::decay_t<T>>::registered_type_index)
+            MeasurableSetHandler(T&& set):
+                MeasurableSetHandler(std::forward<T>(set), MeasurableSetCRTP<std::decay_t<T>>::registered_type_index)
             { }
 
-            MeasurableSet operator&&(const MeasurableSet& rhs) const {
-                union { SetValuedBivariateImpl pairwise_intersection; SetValuedBivariate default_intersection; };
-                if (pairwise_intersection = pairwise_intersection_register().get_function({type_index, rhs.type_index})) {
-                    return pairwise_intersection(*pImpl, *rhs.pImpl);
-                } else if (default_intersection = default_intersection_register().get_function({type_index})) {
-                    return default_intersection(*this, rhs);
-                } else if (default_intersection = default_intersection_register().get_function({rhs.type_index})) {
-                    return default_intersection(rhs, *this);
-                } else {
-                    return abstract_none();
-                }
-            }
+            // operator&& depends on NullSet, so we define it later, after including libp/sets/null.hpp.
+            MeasurableSet operator&&(const MeasurableSet& rhs) const;
 
             MeasurableSet operator||(const MeasurableSet& rhs) const {
                 union { SetValuedBivariateImpl pairwise_union; SetValuedBivariate default_union; };
@@ -180,8 +207,8 @@ namespace libp {
 
             template<class T, class U>
             static void register_operators(void) {
-                auto T_type_index = get_type_index<MeasurableSet, T>();
-                auto U_type_index = get_type_index<MeasurableSet, U>();
+                auto T_type_index = get_type_index<MeasurableSetImpl, T>();
+                auto U_type_index = get_type_index<MeasurableSetImpl, U>();
                 register_operators_onesided<T, U>(T_type_index, U_type_index);
                 register_operators_onesided<U, T>(U_type_index, T_type_index);
             }
@@ -200,11 +227,10 @@ namespace libp {
                     bool
                 > = true
             >
-            MeasurableSet(T&& set, std::size_t type_index_in):
+            MeasurableSetHandler(T&& set, std::size_t type_index_in):
                 pImpl(new std::decay_t<T>(std::forward<T>(set))),
                 type_index(type_index_in)
             { }
-
 
             std::shared_ptr<MeasurableSetImpl> pImpl;
             std::size_t type_index;
@@ -244,7 +270,7 @@ namespace libp {
             template<class T>
             static void default_intersection_this(void) {
                 default_intersection_register().register_function(
-                    {get_type_index<MeasurableSet, T>()},
+                    {get_type_index<MeasurableSetImpl, T>()},
                     get_this_set
                 );
             }
@@ -252,7 +278,7 @@ namespace libp {
             template<class T>
             static void default_intersection_other(void) {
                 default_intersection_register().register_function(
-                    {get_type_index<MeasurableSet, T>()},
+                    {get_type_index<MeasurableSetImpl, T>()},
                     get_other_set
                 );
             }
@@ -260,7 +286,7 @@ namespace libp {
             template<class T>
             static void default_union_this(void) {
                 default_union_register().register_function(
-                    {get_type_index<MeasurableSet, T>()},
+                    {get_type_index<MeasurableSetImpl, T>()},
                     get_this_set
                 );
             }
@@ -268,7 +294,7 @@ namespace libp {
             template<class T>
             static void default_union_other(void) {
                 default_union_register().register_function(
-                    {get_type_index<MeasurableSet, T>()},
+                    {get_type_index<MeasurableSetImpl, T>()},
                     get_other_set
                 );
             }
@@ -298,7 +324,7 @@ namespace libp {
                     {L_type_index, R_type_index},
                     [](const MeasurableSetImpl& lhs, const MeasurableSetImpl& rhs) {
                         auto concrete_intersection = static_cast<const L&>(lhs) && static_cast<const R&>(rhs);
-                        return MeasurableSet(std::move(concrete_intersection), get_type_index<MeasurableSet, decltype(concrete_intersection)>());
+                        return MeasurableSet(std::move(concrete_intersection), get_type_index<MeasurableSetImpl, decltype(concrete_intersection)>());
                     }
                 );
                 
@@ -306,7 +332,7 @@ namespace libp {
                     {L_type_index, R_type_index},
                     [](const MeasurableSetImpl& lhs, const MeasurableSetImpl& rhs) {
                         auto concrete_union = static_cast<const L&>(lhs) || static_cast<const R&>(rhs);
-                        return MeasurableSet(std::move(concrete_union), get_type_index<MeasurableSet, decltype(concrete_union)>());
+                        return MeasurableSet(std::move(concrete_union), get_type_index<MeasurableSetImpl, decltype(concrete_union)>());
                     }
                 );
             }
@@ -314,14 +340,14 @@ namespace libp {
             template<class L, class R>
             static void register_operators_onesided(void) {
                 register_operators_onesided<L, R>(
-                    get_type_index<MeasurableSet, L>(),
-                    get_type_index<MeasurableSet, R>()
+                    get_type_index<MeasurableSetImpl, L>(),
+                    get_type_index<MeasurableSetImpl, R>()
                 );
             }
 
             template<class T>
             static std::size_t register_operators(void) {
-                auto T_type_index = get_type_index<MeasurableSet, T>();
+                auto T_type_index = get_type_index<MeasurableSetImpl, T>();
 
                 register_operators_onesided<T, T>(T_type_index, T_type_index);
 
@@ -347,6 +373,20 @@ namespace libp {
 #include <libp/sets/null.hpp>
 
 namespace libp {
+
+    template<bool Dummy>
+    MeasurableSet MeasurableSetHandler<Dummy>::operator&&(const MeasurableSet& rhs) const {
+        union { SetValuedBivariateImpl pairwise_intersection; SetValuedBivariate default_intersection; };
+        if (pairwise_intersection = pairwise_intersection_register().get_function({type_index, rhs.type_index})) {
+            return pairwise_intersection(*pImpl, *rhs.pImpl);
+        } else if (default_intersection = default_intersection_register().get_function({type_index})) {
+            return default_intersection(*this, rhs);
+        } else if (default_intersection = default_intersection_register().get_function({rhs.type_index})) {
+            return default_intersection(rhs, *this);
+        } else {
+            return none();
+        }
+    }
 
     inline namespace internal {
 
@@ -384,13 +424,13 @@ namespace libp {
     template<class U1>
     void MeasurableSetCRTP<T>::register_operators(std::size_t type_index) {
         // Note that we depend on short-circuit behaviour here so that U1 is not allocated a type index
-        // (which happens when get_type_index<MeasurableSet, U1>() is called for the first time) until
+        // (which happens when get_type_index<MeasurableSetImpl, U1>() is called for the first time) until
         // it is registered. The ensures that the type indices of registered types are as low as possible,
         // and since the size of the storage in the registers (see libp/internal/function_register.hpp)
         // increases with the maximum type index, we also ensure that this storage is a compact as possible.
         if (
             MeasurableSetCRTP<U1>::type_registered &&
-            (type_index == std::numeric_limits<std::size_t>::max() || type_index == get_type_index<MeasurableSet, U1>())
+            (type_index == std::numeric_limits<std::size_t>::max() || type_index == get_type_index<MeasurableSetImpl, U1>())
         ) {
             MeasurableSet::register_operators<T,U1>();
         }
@@ -411,7 +451,7 @@ namespace libp {
     void MeasurableSetCRTP<T>::register_one_operator(std::size_t type_index) {
         // Note that we depend on short-circuit behaviour here, see comment at the top of
         // MeasurableSetCRTP<T>::register_operators<U1>(std::size_t type_index) above.
-        if (MeasurableSetCRTP<U1>::type_registered && type_index == get_type_index<MeasurableSet, U1>()) {
+        if (MeasurableSetCRTP<U1>::type_registered && type_index == get_type_index<MeasurableSetImpl, U1>()) {
             MeasurableSet::register_operators<T,U1>();
         }
     }
@@ -421,7 +461,7 @@ namespace libp {
     void MeasurableSetCRTP<T>::register_one_operator(std::size_t type_index) {
         // Note that we depend on short-circuit behaviour here, see comment at the top of
         // MeasurableSetCRTP<T>::register_operators<U1>(std::size_t type_index) above.
-        if (MeasurableSetCRTP<U1>::type_registered && type_index == get_type_index<MeasurableSet, U1>()) {
+        if (MeasurableSetCRTP<U1>::type_registered && type_index == get_type_index<MeasurableSetImpl, U1>()) {
             MeasurableSet::register_operators<T,U1>();
         } else {
             register_one_operator<U2, Us...>(type_index);
@@ -437,7 +477,7 @@ namespace libp {
     template<class T>
     template<class U1, class U2, class... Us>
     void MeasurableSetCRTP<T>::register_operators(void) {
-        MeasurableSet::register_operators<T,U1>();
+        if (MeasurableSetCRTP<U1>::type_registered) MeasurableSet::register_operators<T,U1>();
         register_operators<U2, Us...>();
     }
 
@@ -453,14 +493,14 @@ namespace libp {
 
     template<class T>
     std::size_t MeasurableSetCRTP<T>::get_registered_type_index(void) {
-        assert(!type_registered);                               // We intend this function to be called once per T.
-        register_type();                                        // Register defaults.
-        register_type(std::numeric_limits<std::size_t>::max()); // Register non-defaults.
+        assert(!type_registered);                                       // We intend this function to be called once per T.
+        maybe_register_type();                                          // Register defaults.
+        maybe_register_type(std::numeric_limits<std::size_t>::max());   // Register non-defaults.
         auto type_idx = MeasurableSet::register_operators<T>();
-        type_registered = true;                                 // reg(type_idx) below relies on this.
+        type_registered = true;                                         // reg(type_idx) below relies on this.
         auto& registered_types_register_type = get_registered_types_register_type();
         for (auto reg : registered_types_register_type) { reg(type_idx); }
-        registered_types_register_type.push_back(&register_type);
+        registered_types_register_type.push_back(&maybe_register_type);
         return type_idx;
     }
 

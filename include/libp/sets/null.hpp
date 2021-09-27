@@ -6,14 +6,9 @@
 
 namespace libp {
 
-    class MeasurableSet;
-
-    inline namespace internal {
-
-        // Used by measurable_set.hpp.
-        inline MeasurableSet abstract_none(void);
-
-    }
+    class NullSet;
+    inline NullSet none(void);
+    inline NullSet null(void);
 
 }
 
@@ -29,15 +24,8 @@ namespace libp {
             }
     };
 
-    inline NullSet none(void) { return NullSet(); }
-    inline NullSet null(void) { return NullSet(); }
-
-    inline namespace internal {
-
-        MeasurableSet abstract_none(void) { return NullSet(); }
-
-    }
-
+    NullSet none(void) { return NullSet(); }
+    NullSet null(void) { return NullSet(); }
 }
 
 #include <libp/measures/counting.hpp>

@@ -12,5 +12,18 @@ if (TARGET boost_test)
         PUBLIC boost_test
         PUBLIC libp
     )
+
+    # Tests of the behaviour of static functions needs to be in its own
+    # executable, since the behaviour we want to test is runs during
+    # static initialisation if MeasurableSet objects exist in the
+    # executable.
+    add_executable(test_measurable_set_statics
+        "test_measurable_set_statics.cpp"
+    )
+    target_link_libraries(test_measurable_set_statics
+        PUBLIC boost_test
+        PUBLIC libp
+    )
+
 endif()
 
