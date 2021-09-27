@@ -28,9 +28,27 @@ namespace libp { inline namespace internal {
                 default_function{}
             { }
 
+            FunctionRegister(const std::array<IndexType, IndexDimension>& argument_index_sizes_in):
+                argument_index_sizes(argument_index_sizes_in),
+                default_function{},
+                functions(
+                    [&]() {
+                        IndexType functions_size = 1;
+                        for (auto s : argument_index_sizes) { functions_size *= s; }
+                        return functions_size;
+                    }(),
+                    default_function
+                )
+            { }
+
+            FunctionRegister(FunctionType default_function_in):
+                argument_index_sizes{},
+                default_function(std::move(default_function_in))
+            { }
+
             FunctionRegister(
                 const std::array<IndexType, IndexDimension>& argument_index_sizes_in,
-                FunctionType default_function_in = FunctionType{}
+                FunctionType default_function_in
             ):
                 argument_index_sizes(argument_index_sizes_in),
                 default_function(std::move(default_function_in)),
