@@ -95,11 +95,23 @@ std::ostream& operator<<(std::ostream& os, const std::array<T, N>& arr) {
 
 template<uint64_t Dimension>
 void function_register_test_nested(uint64_t max_arg) {
-    libp::internal::FunctionRegister<Constant, Dimension> function_register;
+    std::array<uint64_t, Dimension> args;
+    
     uint64_t max_z = 1;
     for (uint64_t i = 0; i != Dimension; ++i) {
         max_z *= max_arg;
     }
+
+    for (auto& s : args) { s = max_arg; }
+    libp::internal::FunctionRegister<void(*)(void), Dimension> function_register_null(args);
+    for (uint64_t z = 0; z <= max_z; ++z) {
+        inv_cantor_tuple_function(z, args.begin(), args.end());
+        auto fn = function_register_null.get_function(args);
+        BOOST_TEST(fn == nullptr);
+        if (fn != nullptr) break;
+    }
+
+    libp::internal::FunctionRegister<Constant, Dimension> function_register;
 
     std::vector<uint64_t> z = [max_z]() {
         using namespace std::chrono;
@@ -117,8 +129,6 @@ void function_register_test_nested(uint64_t max_arg) {
 
         return z_nested;
     }();
-
-    std::array<uint64_t, Dimension> args;
 
     for (auto iter = z.cbegin(); iter != z.cend(); ++iter) {
         uint64_t zi = *iter;
