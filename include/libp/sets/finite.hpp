@@ -12,10 +12,10 @@
 #include <libp/internal/constants.hpp>
 #include <libp/sets/all.hpp>
 #include <libp/sets/conditional.hpp>
+#include <libp/sets/empty.hpp>
 #include <libp/sets/integers.hpp>
 #include <libp/sets/measurable_set.hpp>
 #include <libp/sets/natural_numbers.hpp>
-#include <libp/sets/none.hpp>
 
 namespace libp {
 

@@ -66,7 +66,7 @@ BOOST_AUTO_TEST_CASE(libp_measurable_set_registration_test) {
         }
     }
 
-    BOOST_TEST(!MeasurableSetCRTP<NullSet>::type_registered);
+    BOOST_TEST(!MeasurableSetCRTP<EmptySet>::type_registered);
     BOOST_TEST(!MeasurableSetCRTP<UniversalSet>::type_registered);
 }
 

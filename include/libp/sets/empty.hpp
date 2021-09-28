@@ -1,14 +1,14 @@
-#ifndef LIBP_SETS_NULL_HPP_GUARD
-#define LIBP_SETS_NULL_HPP_GUARD
+#ifndef LIBP_SETS_EMPTY_HPP_GUARD
+#define LIBP_SETS_EMPTY_HPP_GUARD
 
 #include <ostream>
 #include <type_traits>
 
 namespace libp {
 
-    class NullSet;
-    inline NullSet none(void);
-    inline NullSet null(void);
+    class EmptySet;
+    inline EmptySet empty_set();
+    inline EmptySet none();
 
 }
 
@@ -16,7 +16,7 @@ namespace libp {
 
 namespace libp {
 
-    class NullSet final : public MeasurableSetCRTP<NullSet> {
+    class EmptySet final : public MeasurableSetCRTP<EmptySet> {
         public:
             static void register_type(void) {
                 default_intersection_this();
@@ -24,8 +24,8 @@ namespace libp {
             }
     };
 
-    NullSet none(void) { return NullSet(); }
-    NullSet null(void) { return NullSet(); }
+    EmptySet empty_set(void) { return EmptySet(); }
+    EmptySet none(void) { return EmptySet(); }
 }
 
 #include <libp/measures/counting.hpp>
@@ -33,7 +33,7 @@ namespace libp {
 
 namespace libp {
 
-    inline auto operator==(const NullSet&, const NullSet&) { return true; }
+    inline auto operator==(const EmptySet&, const EmptySet&) { return true; }
 
     template<
         class R,
@@ -43,7 +43,7 @@ namespace libp {
             bool
         > = true
     >
-    auto operator==(const NullSet&, const R& rhs) {
+    auto operator==(const EmptySet&, const R& rhs) {
         return counting_measure(rhs) == 0;
     }
 
@@ -55,7 +55,7 @@ namespace libp {
             bool
         > = true
     >
-    auto operator==(const L& lhs, const NullSet&) {
+    auto operator==(const L& lhs, const EmptySet&) {
         return counting_measure(lhs) == 0;
     }
 
@@ -64,11 +64,11 @@ namespace libp {
         std::enable_if_t<
             std::is_base_of<MeasurableSetImpl, std::decay_t<T>>::value &&
             !std::is_same<UniversalSet, std::decay_t<T>>::value &&
-            !std::is_same<NullSet, std::decay_t<T>>::value,
+            !std::is_same<EmptySet, std::decay_t<T>>::value,
             bool
         > = true
     >
-    auto operator&&(const NullSet& lhs, const T&) {
+    auto operator&&(const EmptySet& lhs, const T&) {
         return lhs;
     }
 
@@ -77,11 +77,11 @@ namespace libp {
         std::enable_if_t<
             std::is_base_of<MeasurableSetImpl, std::decay_t<T>>::value &&
             !std::is_same<UniversalSet, std::decay_t<T>>::value &&
-            !std::is_same<NullSet, std::decay_t<T>>::value,
+            !std::is_same<EmptySet, std::decay_t<T>>::value,
             bool
         > = true
     >
-    auto operator&&(const T&, const NullSet& rhs) {
+    auto operator&&(const T&, const EmptySet& rhs) {
         return rhs;
     }
 
@@ -90,11 +90,11 @@ namespace libp {
         std::enable_if_t<
             std::is_base_of<MeasurableSetImpl, std::decay_t<T>>::value &&
             !std::is_same<UniversalSet, std::decay_t<T>>::value &&
-            !std::is_same<NullSet, std::decay_t<T>>::value,
+            !std::is_same<EmptySet, std::decay_t<T>>::value,
             bool
         > = true
     >
-    auto operator||(const NullSet&, const T& rhs) {
+    auto operator||(const EmptySet&, const T& rhs) {
         return rhs;
     }
 
@@ -103,15 +103,15 @@ namespace libp {
         std::enable_if_t<
             std::is_base_of<MeasurableSetImpl, std::decay_t<T>>::value &&
             !std::is_same<UniversalSet, std::decay_t<T>>::value &&
-            !std::is_same<NullSet, std::decay_t<T>>::value,
+            !std::is_same<EmptySet, std::decay_t<T>>::value,
             bool
         > = true
     >
-    auto operator||(const T& lhs, const NullSet&) {
+    auto operator||(const T& lhs, const EmptySet&) {
         return lhs;
     }
 
-    inline std::ostream& operator<<(std::ostream& os, const NullSet&) {
+    inline std::ostream& operator<<(std::ostream& os, const EmptySet&) {
         os << utf8::emptyset;
         return os;
     }

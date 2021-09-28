@@ -370,7 +370,7 @@ namespace libp {
 
 }
 
-#include <libp/sets/null.hpp>
+#include <libp/sets/empty.hpp>
 
 namespace libp {
 
@@ -384,7 +384,7 @@ namespace libp {
         } else if (default_intersection = default_intersection_register().get_function({rhs.type_index})) {
             return default_intersection(rhs, *this);
         } else {
-            return none();
+            return empty_set();
         }
     }
 

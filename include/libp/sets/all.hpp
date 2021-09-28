@@ -2,10 +2,10 @@
 #define LIBP_SETS_ALL_HPP_GUARD
 
 #include <type_traits>
+#include <libp/sets/empty.hpp>
 #include <libp/sets/integers.hpp>
 #include <libp/sets/measurable_set.hpp>
 #include <libp/sets/natural_numbers.hpp>
-#include <libp/sets/null.hpp>
 #include <libp/sets/real_numbers.hpp>
 #include <libp/sets/universal.hpp>
 
@@ -54,7 +54,7 @@ namespace libp {
         std::enable_if_t<std::is_void<T>::value, bool> = true
     >
     auto all(void) {
-        return NullSet();
+        return EmptySet();
     }
 
     template<
