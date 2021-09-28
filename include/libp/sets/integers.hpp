@@ -3,6 +3,7 @@
 
 #include <ostream>
 #include <type_traits>
+#include <libp/internal/utf8.hpp>
 #include <libp/sets/measurable_set.hpp>
 
 namespace libp {
@@ -40,7 +41,7 @@ namespace libp {
     }
 
     inline std::ostream& operator<<(std::ostream& os, const Integers&) {
-        os << u8"\u2124"; // This is UTF-8 for the latex character \mathbb{Z}.
+        os << utf8::blackboard_Z;
         return os;
     }
 

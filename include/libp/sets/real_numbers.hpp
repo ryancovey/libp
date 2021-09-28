@@ -2,6 +2,7 @@
 #define LIBP_SETS_REAL_NUMBERS_HPP_GUARD
 
 #include <ostream>
+#include <libp/internal/utf8.hpp>
 #include <libp/sets/measurable_set.hpp>
 
 namespace libp {
@@ -39,7 +40,7 @@ namespace libp {
     }
 
     std::ostream& operator<<(std::ostream& os, const RealNumbers&) {
-        os << u8"\u211D"; // This is UTF-8 for the latex character \mathbb{R}.
+        os << utf8::blackboard_R;
         return os;
     }
 

@@ -112,7 +112,7 @@ namespace libp {
     }
 
     inline std::ostream& operator<<(std::ostream& os, const NullSet&) {
-        os << u8"\u2205"; // This is UTF-8 for the latex character \varnothing.
+        os << utf8::emptyset;
         return os;
     }
 

@@ -2,6 +2,7 @@
 #define LIBP_SETS_NATURAL_NUMBERS_HPP_GUARD
 
 #include <ostream>
+#include <libp/internal/utf8.hpp>
 #include <libp/sets/measurable_set.hpp>
 
 namespace libp {
@@ -33,7 +34,7 @@ namespace libp {
     }
 
     inline std::ostream& operator<<(std::ostream& os, const NaturalNumbers&) {
-        os << u8"\u2115"; // This is UTF-8 for the latex character \mathbb{N}.
+        os << utf8::blackboard_N;
         return os;
     }
 
