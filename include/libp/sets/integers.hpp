@@ -13,6 +13,8 @@ namespace libp {
             static void register_type(std::size_t);
     };
 
+    auto integers(void) { return Integers(); }
+
 }
 
 #include <libp/sets/natural_numbers.hpp>
@@ -44,8 +46,6 @@ namespace libp {
         os << utf8::blackboard_Z;
         return os;
     }
-
-    auto integers(void) { return Integers(); }
 
 }
 

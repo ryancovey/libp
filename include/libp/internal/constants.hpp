@@ -12,6 +12,11 @@ namespace libp { inline namespace internal {
         return to<T>(0);
     }
 
+    template<class T>
+    T one(void) {
+        return to<T>(1);
+    }
+
     template<
         class T,
         std::enable_if_t<std::is_integral<T>::value, bool> = true

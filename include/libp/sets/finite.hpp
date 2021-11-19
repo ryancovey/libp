@@ -10,6 +10,7 @@
 #include <vector>
 #include <set>
 #include <libp/internal/constants.hpp>
+#include <libp/sets/affine.hpp>
 #include <libp/sets/all.hpp>
 #include <libp/sets/conditional.hpp>
 #include <libp/sets/empty.hpp>
@@ -297,6 +298,17 @@ namespace libp {
 
             auto size(void) const { return storage.size(); }
 
+            template<class F>
+            auto image_under(F&& f) const {
+                Container<decltype(f(*std::cbegin(storage)))> image;
+                std::transform(
+                    std::cbegin(storage), std::cend(storage),
+                    std::inserter(image, std::begin(image)),
+                    std::forward<F>(f)
+                );
+                return FiniteSet<decltype(f(*std::cbegin(storage))), Container>(std::move(image));
+            }
+
         private:
             Container<T> storage;
 
@@ -327,6 +339,26 @@ namespace libp {
     template<class T, template<class, class...> class Container = finite_set_default_container>
     auto finite_set(std::initializer_list<T> il) {
         return FiniteSet<T, Container>(std::move(il));
+    }
+
+    template<class L, class T, template<class, class...> class Container>
+    auto operator*(const L& lhs, const FiniteSet<T, Container>& rhs) {
+        return rhs.image_under([&lhs] (const auto& element) { return lhs*element; });
+    }
+
+    template<class T, template<class, class...> class Container, class R>
+    auto operator*(const FiniteSet<T, Container>& lhs, const R& rhs) {
+        return lhs.image_under([&rhs] (const auto& element) { return element*rhs; });
+    }
+
+    template<class L, class T, template<class, class...> class Container>
+    auto operator+(const L& lhs, const FiniteSet<T, Container>& rhs) {
+        return rhs.image_under([&lhs] (const auto& element) { return lhs + element; });
+    }
+
+    template<class T, template<class, class...> class Container, class R>
+    auto operator+(const FiniteSet<T, Container>& lhs ,const R& rhs) {
+        return lhs.image_under([&rhs] (const auto& element) { return element + rhs; });
     }
 
     template<

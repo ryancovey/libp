@@ -3,6 +3,7 @@
 
 #include <type_traits>
 #include <libp/internal/constants.hpp>
+#include <libp/sets/interval.hpp>
 #include <libp/measures/measure.hpp>
 #include <libp/sets/measurable_set.hpp>
 #include <libp/sets/real_numbers.hpp>
@@ -19,6 +20,15 @@ namespace libp {
             >
             auto operator()(const SetType&) {
                 return zero<Codomain>();
+            }
+
+            template<class RealType>
+            Codomain operator()(const Interval<RealType>& I) {
+                if (I.real() || I.integer_complement()) {
+                    return std::max(upper_bound - lower_bound, zero<Codomain>());
+                } else {
+                    return zero<Codomain>();
+                }
             }
 
             auto operator()(const UniversalSet&) {

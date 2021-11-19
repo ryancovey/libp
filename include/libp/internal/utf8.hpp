@@ -8,6 +8,7 @@ namespace libp { inline namespace internal { namespace utf8 {
     static constexpr const char blackboard_Z[] = u8"\u2124";        // \mathbb{Z}
     static constexpr const char blackboard_U[] = u8"\U0001D54C";    // \mathbb{U}
     static constexpr const char emptyset[] =     u8"\u2205";        // \varnothing
+    static constexpr const char times[] =        u8"\u00D7";        // \times
 
 }}}
 

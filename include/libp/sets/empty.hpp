@@ -111,6 +111,26 @@ namespace libp {
         return lhs;
     }
 
+    template<class L>
+    auto operator*(const L&, const EmptySet& rhs) {
+        return rhs;
+    }
+
+    template<class R>
+    auto operator*(const EmptySet& lhs, const R&) {
+        return lhs;
+    }
+
+    template<class L>
+    auto operator+(const L&, const EmptySet& rhs) {
+        return rhs;
+    }
+
+    template<class R>
+    auto operator+(const EmptySet& lhs, const R&) {
+        return lhs;
+    }
+
     inline std::ostream& operator<<(std::ostream& os, const EmptySet&) {
         os << utf8::emptyset;
         return os;
