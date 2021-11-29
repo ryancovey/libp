@@ -8,6 +8,16 @@
 namespace libp { inline namespace internal {
 
     template<class T>
+    T truthy(void) {
+        return to<T>(true);
+    }
+
+    template<class T>
+    T falsey(void) {
+        return to<T>(false);
+    }
+
+    template<class T>
     T zero(void) {
         return to<T>(0);
     }
