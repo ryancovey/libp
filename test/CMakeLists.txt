@@ -2,14 +2,15 @@ cmake_minimum_required(VERSION 3.8 FATAL_ERROR)
 
 # Only compile tests if dependencies have been downloaded.
 
-if (TARGET boost_test)
+if (TARGET boost_unit_test_framework)
     add_executable(tests
         "function_register_test.cpp"
         "sets_test.cpp"
         "test_main.cpp"
     )
     target_link_libraries(tests
-        PUBLIC boost_test
+    	PUBLIC boost_include
+        PUBLIC boost_unit_test_framework
         PUBLIC libp
     )
 
@@ -21,9 +22,9 @@ if (TARGET boost_test)
         "test_measurable_set_statics.cpp"
     )
     target_link_libraries(test_measurable_set_statics
-        PUBLIC boost_test
+        PUBLIC boost_include
+        PUBLIC boost_unit_test_framework
         PUBLIC libp
     )
-
 endif()
 

@@ -175,12 +175,17 @@ namespace libp {
             // via a call to the static member function MeasurableSetCRTP<std::decay_t<T>>::get_registered_type_index(),
             // which does the registration.
             template<
-                class T,
+                class T//,
+                /*
                 std::enable_if_t<
                     std::is_base_of<MeasurableSetImpl, std::decay_t<T>>::value &&
                     !std::is_same<MeasurableSetImpl, std::decay_t<T>>::value,
                     bool
                 > = true
+                */
+                // Uncommenting this template argument causes "error: invalid use of incomplete type 'class libp::EmptySet'".
+                // Since we're planning on expressing everything as an interval, this file is likely to be deleted in the near
+                // future, so no need to address the error.
             >
             MeasurableSetHandler(T&& set):
                 MeasurableSetHandler(std::forward<T>(set), MeasurableSetCRTP<std::decay_t<T>>::registered_type_index)

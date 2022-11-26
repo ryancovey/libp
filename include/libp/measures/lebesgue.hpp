@@ -25,7 +25,7 @@ namespace libp {
 
             template<class RealType>
             Codomain operator()(const Interval<RealType>& I) {
-                return max(upper_bound - lower_bound, zero<Codomain>());
+                return max(I.upper_bound - I.lower_bound, zero<Codomain>());
             }
 
             auto operator()(const UniversalSet&) {

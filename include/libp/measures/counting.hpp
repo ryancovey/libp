@@ -1,6 +1,9 @@
 #ifndef LIBP_MEASURES_COUNTING_HPP_GUARD
 #define LIBP_MEASURES_COUNTING_HPP_GUARD
 
+template<class Codomain = std::size_t, class T>
+auto counting_measure(const T& A);
+
 #include <algorithm>
 #include <cmath>
 #include <cstddef>

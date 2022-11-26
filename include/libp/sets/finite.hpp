@@ -10,7 +10,6 @@
 #include <vector>
 #include <set>
 #include <libp/internal/constants.hpp>
-#include <libp/sets/affine.hpp>
 #include <libp/sets/all.hpp>
 #include <libp/sets/conditional.hpp>
 #include <libp/sets/empty.hpp>
