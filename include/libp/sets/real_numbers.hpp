@@ -19,7 +19,7 @@ namespace libp {
 
 namespace libp {
 
-    void RealNumbers::register_type(std::size_t i) {
+    inline void RealNumbers::register_type(std::size_t i) {
         register_operators<NaturalNumbers, Integers>(i);
     }
 
@@ -39,12 +39,12 @@ namespace libp {
         return lhs;
     }
 
-    std::ostream& operator<<(std::ostream& os, const RealNumbers&) {
+    inline std::ostream& operator<<(std::ostream& os, const RealNumbers&) {
         os << utf8::blackboard_R;
         return os;
     }
 
-    auto real_numbers(void) { return RealNumbers(); }
+    inline auto real_numbers(void) { return RealNumbers(); }
 
 }
 

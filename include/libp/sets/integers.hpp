@@ -10,10 +10,10 @@ namespace libp {
 
     class Integers final : public MeasurableSetCRTP<Integers> {
         public:
-            static void register_type(std::size_t);
+            inline static void register_type(std::size_t);
     };
 
-    auto integers(void) { return Integers(); }
+    inline auto integers(void) { return Integers(); }
 
 }
 

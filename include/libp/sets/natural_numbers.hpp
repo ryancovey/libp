@@ -38,7 +38,7 @@ namespace libp {
         return os;
     }
 
-    auto natural_numbers(void) { return NaturalNumbers(); }
+    inline auto natural_numbers(void) { return NaturalNumbers(); }
 
 }
 

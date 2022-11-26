@@ -225,12 +225,13 @@ namespace libp {
             // registration when a MeasurableSet holding a std::decay_t<T> (and therefore constructed using the constructor
             // above that registers std::decay_t<T> for multiple dispatch) is not actually used by a user of libp.
             template<
-                class T,
+                class T/*,
                 std::enable_if_t<
                     std::is_base_of<MeasurableSetImpl, std::decay_t<T>>::value &&
                     !std::is_same<MeasurableSetImpl, std::decay_t<T>>::value,
                     bool
                 > = true
+                */
             >
             MeasurableSetHandler(T&& set, std::size_t type_index_in):
                 pImpl(new std::decay_t<T>(std::forward<T>(set))),
@@ -368,7 +369,7 @@ namespace libp {
 
     };
 
-    std::ostream& operator<<(std::ostream& os, const MeasurableSet& set) {
+    inline std::ostream& operator<<(std::ostream& os, const MeasurableSet& set) {
         // Need to .get_function rather than .execute_function since std::ostream(const std::ostream&) is deleted.
         return MeasurableSet::output_operator_register().get_function({set.type_index})(os, *set.pImpl);
     }

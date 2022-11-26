@@ -5,6 +5,7 @@ cmake_minimum_required(VERSION 3.8 FATAL_ERROR)
 if (TARGET boost_unit_test_framework)
     add_executable(tests
         "function_register_test.cpp"
+        "interval_test.cpp"
         "sets_test.cpp"
         "test_main.cpp"
     )
