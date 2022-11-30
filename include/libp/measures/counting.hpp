@@ -31,6 +31,7 @@ namespace libp {
                 return zero<Codomain>();
             }
 
+            /*
             template<class RealType, class BooleanType>
             Codomain operator()(const Interval<RealType, BooleanType>& I) {
                 return where(
@@ -43,6 +44,7 @@ namespace libp {
                     )
                 );
             }
+            */
 
             auto operator()(const UniversalSet&) {
                 return infinity<Codomain>();

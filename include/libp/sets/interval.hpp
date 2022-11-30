@@ -9,8 +9,8 @@
 #include <libp/internal/constants.hpp>
 #include <libp/internal/max.hpp>
 #include <libp/internal/where.hpp>
-#include <libp/measures/counting.hpp>
-#include <libp/sets/measurable_set.hpp>
+// #include <libp/measures/counting.hpp>
+// #include <libp/sets/measurable_set.hpp>
 
 namespace libp {
 
@@ -36,8 +36,9 @@ namespace libp {
     class IntervalUnion;
 
     template<class RealType, class BooleanType = bool>
-    class Interval : public MeasurableSetCRTP<Interval<RealType, BooleanType>> {
+    class Interval /*: public MeasurableSetCRTP<Interval<RealType, BooleanType>>*/ {
         friend class IntervalUnion<RealType, BooleanType>;
+        // friend std::ostream& operator<<(std::ostream&, const Interval<RealType, BooleanType>&);
         public:
             Interval(): 
                 lower_bound_m(zero<RealType>()),
@@ -53,16 +54,21 @@ namespace libp {
                 upper_bound_closed_m(ub.kind == EndpointKind::closed)
             { canonicalise(); }
 
-            auto lower_bound_value(void) { return lower_bound_m; }
-            auto lower_bound_closed(void) { return lower_bound_closed_m; }
-            auto lower_bound_open(void) { return !lower_bound_closed_m; }
+            auto lower_bound_value(void) const { return lower_bound_m; }
+            auto lower_bound_closed(void) const { return lower_bound_closed_m; }
+            auto lower_bound_open(void) const { return !lower_bound_closed_m; }
 
-            auto upper_bound_value(void) { return upper_bound_m; }
-            auto upper_bound_closed(void) { return upper_bound_closed_m; }
-            auto upper_bound_open(void) { return !upper_bound_closed_m; }
+            auto upper_bound_value(void) const { return upper_bound_m; }
+            auto upper_bound_closed(void) const { return upper_bound_closed_m; }
+            auto upper_bound_open(void) const { return !upper_bound_closed_m; }
 
-            auto closed(void) { return lower_bound_closed() && upper_bound_closed(); }
-            auto open(void) { return lower_bound_open() && upper_bound_open(); }
+            auto closed(void) const { return lower_bound_closed() && upper_bound_closed(); }
+            auto open(void) const { return lower_bound_open() && upper_bound_open(); }
+
+            auto empty(void) const {
+                // Does not assume that we're in a canonical representation.
+                return ((lower_bound_m == upper_bound_m && open()) || lower_bound_m > upper_bound_m);
+            }
 
             bool operator==(const Interval<RealType, BooleanType>& rhs) const {
                 return lower_bound_m == rhs.lower_bound_m &&
@@ -73,7 +79,7 @@ namespace libp {
 
             bool operator!=(const Interval<RealType, BooleanType>& rhs) const {
                 return !operator==(rhs);
-            }
+            }            
 
         private:
             RealType lower_bound_m;
@@ -82,8 +88,7 @@ namespace libp {
             BooleanType upper_bound_closed_m;
 
             void canonicalise(void) {
-                auto empty = !(lower_bound_m < upper_bound_m || (lower_bound_m == upper_bound_m && closed()));
-                if (empty) {
+                if (empty()) {
                     auto nill = zero<RealType>();
                     auto no = falsey<BooleanType>();
                     lower_bound_m = nill;
@@ -95,7 +100,14 @@ namespace libp {
     };
 
     template<class RealType, class BooleanType>
-    class IntervalUnion : public MeasurableSetCRTP<IntervalUnion<RealType, BooleanType>> {
+    std::ostream& operator<<(std::ostream& os, const libp::Interval<RealType, BooleanType>& I) {
+        os << (I.lower_bound_closed() ? '[' : '(') << I.lower_bound_value() << ", "
+           << I.upper_bound_value() << (I.upper_bound_closed() ? ']' : ')');
+        return os;
+    }
+
+    template<class RealType, class BooleanType>
+    class IntervalUnion /*: public MeasurableSetCRTP<IntervalUnion<RealType, BooleanType>>*/ {
         public:
             IntervalUnion(Interval<RealType, BooleanType> interval) {
                 intervals.emplace_back(std::move(interval));
@@ -121,7 +133,7 @@ namespace libp {
                     new_first_interval.upper_bound = where(first_interval_unbounded_below, nill, first_interval.lower_bound_m);
                     new_first_interval.lower_bound_closed_m = no;
                     new_first_interval.upper_bound_closed_m = where(first_interval_unbounded_below, no, !first_interval.lower_bound_closed_m);
-                    if (!all_of(counting_measure<RealType>(new_first_interval) == nill)) {
+                    if (!new_first_interval.uncanonically_empty()) {
                         complement.intervals.emplace_back(std::move(new_first_interval));
                     }
 
@@ -137,12 +149,12 @@ namespace libp {
 
                     const auto& last_interval = intervals.last();
                     Interval<RealType, BooleanType> new_last_interval;
-                    auto last_interval_unbounded_above = last_interval.upper_bound == inf;
+                    auto last_interval_unbounded_above = (last_interval.upper_bound == inf);
                     new_last_interval.lower_bound_m = where(last_interval_unbounded_above, nill, inf);
                     new_last_interval.upper_bound = where(last_interval_unbounded_above, nill, -inf);
                     new_last_interval.lower_bound_closed_m = where(last_interval_unbounded_above, no, !last_interval.upper_bound_closed_m);
                     new_last_interval.upper_bound_closed_m = no;
-                    if (!all_of(counting_measure<RealType>(new_last_interval) == nill)) {
+                    if (!new_last_interval.empty()) {
                         complement.intervals.emplace_back(std::move(new_last_interval));
                     }
                 }
@@ -172,9 +184,9 @@ namespace libp {
                         auto I = where(lhsi_lteq_J, *lhs_iter, J);
                         J = where(lhsi_lteq_J, J, *lhs_iter);
                         canonicalise_interval_intersection(I,J); // This call sets I to I and J, and sets J to J\I.
-                        if (counting_measure<std::size_t>(I) != 0) { intersection.intervals.emplace_back(std::move(I)); }
+                        if (!I.empty()) { intersection.intervals.emplace_back(std::move(I)); }
                         if (++lhs_iter == lhs_end) { return intersection; }
-                        if (counting_measure<std::size_t>(J) == 0) {
+                        if (J.empty()) {
                             if (++rhs_iter == rhs_end) { return intersection; }
                             J = *rhs_iter;
                         }

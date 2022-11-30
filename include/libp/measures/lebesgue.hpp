@@ -23,10 +23,12 @@ namespace libp {
                 return zero<Codomain>();
             }
 
+            /*
             template<class RealType>
             Codomain operator()(const Interval<RealType>& I) {
                 return max(I.upper_bound - I.lower_bound, zero<Codomain>());
             }
+            */
 
             auto operator()(const UniversalSet&) {
                 return infinity<Codomain>();
