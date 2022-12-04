@@ -1,9 +1,11 @@
 #ifndef LIBP_SETS_INTERVAL_HPP_GUARD
 #define LIBP_SETS_INTERVAL_HPP_GUARD
 
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <iterator>
+#include <limits>
 #include <utility>
 #include <vector>
 #include <libp/internal/constants.hpp>
@@ -14,291 +16,352 @@
 
 namespace libp {
 
-    enum class EndpointKind {open, closed};
-
-    template<class Numeric>
-    struct Endpoint {
-        Numeric point;
-        EndpointKind kind;
-    };
-
-    template<class Numeric>
-    Endpoint<Numeric> open(Numeric point) {
-        return {std::move(point), EndpointKind::open};
-    }
-
-    template<class Numeric>
-    Endpoint<Numeric> closed(Numeric point) {
-        return {std::move(point), EndpointKind::closed};
-    }
-
-    template<class RealType, class BooleanType = bool>
+    template<class RealType>
     class IntervalUnion;
 
-    template<class RealType, class BooleanType = bool>
-    class Interval /*: public MeasurableSetCRTP<Interval<RealType, BooleanType>>*/ {
-        friend class IntervalUnion<RealType, BooleanType>;
-        // friend std::ostream& operator<<(std::ostream&, const Interval<RealType, BooleanType>&);
+    template<class RealType>
+    class Interval {
+        friend class IntervalUnion<RealType>;
+
         public:
             Interval(): 
-                lower_bound_m(zero<RealType>()),
-                upper_bound_m(zero<RealType>()),
-                lower_bound_closed_m(falsey<BooleanType>()),
-                upper_bound_closed_m(falsey<BooleanType>())
+                left_value_m(0),
+                right_value_m(0),
+                left_bracket_m('('),
+                right_bracket_m(')')
             { }
 
-            Interval(const Endpoint<RealType>& lb, const Endpoint<RealType>& ub):
-                lower_bound_m(lb.point),
-                upper_bound_m(ub.point),
-                lower_bound_closed_m(lb.kind == EndpointKind::closed),
-                upper_bound_closed_m(ub.kind == EndpointKind::closed)
-            { canonicalise(); }
+            Interval(char left_bracket_in, RealType left_value_in, RealType right_value_in, char right_bracket_in):
+                left_value_m(left_value_in),
+                right_value_m(right_value_in),
+                left_bracket_m(left_bracket_in),
+                right_bracket_m(right_bracket_in)
+            {
+                if (
+                    (left_bracket_m != '(' && left_bracket_m != '[') ||
+                    (right_bracket_m != ')' && right_bracket_m != ']') ||
+                    std::isnan(left_value_m) || std::isnan(right_value_m)
+                ) {
+                    set_to_nan();
+                } else {
+                    canonicalise();
+                }
+            }
 
-            auto lower_bound_value(void) const { return lower_bound_m; }
-            auto lower_bound_closed(void) const { return lower_bound_closed_m; }
-            auto lower_bound_open(void) const { return !lower_bound_closed_m; }
+            auto left_value(void) const { return left_value_m; }
+            auto left_bracket(void) const { return left_bracket_m; }
+            auto inv_left_bracket(void) const { return left_bracket_m == '(' ? '[' : '('; }
 
-            auto upper_bound_value(void) const { return upper_bound_m; }
-            auto upper_bound_closed(void) const { return upper_bound_closed_m; }
-            auto upper_bound_open(void) const { return !upper_bound_closed_m; }
+            auto right_value(void) const { return right_value_m; }
+            auto right_bracket(void) const { return right_bracket_m; }
+            auto inv_right_bracket(void) const { return right_bracket_m == ')' ? ']' : ')'; }
 
-            auto closed(void) const { return lower_bound_closed() && upper_bound_closed(); }
-            auto open(void) const { return lower_bound_open() && upper_bound_open(); }
+            auto open(void) const { return left_bracket() == '(' && right_bracket() == ')'; }
+            auto closed(void) const { return left_bracket() == '[' && right_bracket() == ']'; }
 
             auto empty(void) const {
-                // Does not assume that we're in a canonical representation.
-                return ((lower_bound_m == upper_bound_m && open()) || lower_bound_m > upper_bound_m);
+                // Does not assume that we're in a canonical representation, but does assume that the
+                // left bracket is '(' or '[', likewise for the right bracket. Returns false if NaN.
+                return ((left_value_m == right_value_m && !closed()) || left_value_m > right_value_m);
             }
 
-            bool operator==(const Interval<RealType, BooleanType>& rhs) const {
-                return lower_bound_m == rhs.lower_bound_m &&
-                    upper_bound_m == rhs.upper_bound_m &&
-                    lower_bound_closed_m == rhs.lower_bound_closed_m &&
-                    upper_bound_closed_m == rhs.upper_bound_closed_m;
+            auto isnan(void) const { return std::isnan(left_value_m); }
+
+            template<class T>
+            bool operator==(const Interval<T>& rhs) const {
+                return left_bracket_m == rhs.left_bracket_m &&
+                    left_value_m == rhs.left_value_m &&
+                    right_value_m == rhs.right_value_m &&
+                    right_bracket_m == rhs.right_bracket_m;
             }
 
-            bool operator!=(const Interval<RealType, BooleanType>& rhs) const {
-                return !operator==(rhs);
-            }            
+            template<class T>
+            bool operator!=(const Interval<T>& rhs) const {
+                if (isnan() || rhs.isnan()) {
+                    return false;
+                } else {
+                    return !operator==(rhs);
+                }
+            }
+
+            static Interval<RealType> nan(void) {
+                Interval<RealType> ret;
+                ret.set_to_nan();
+                return ret;
+            }
 
         private:
-            RealType lower_bound_m;
-            RealType upper_bound_m;
-            BooleanType lower_bound_closed_m;
-            BooleanType upper_bound_closed_m;
+            RealType left_value_m;
+            RealType right_value_m;
+            char left_bracket_m;
+            char right_bracket_m;
 
             void canonicalise(void) {
                 if (empty()) {
-                    auto nill = zero<RealType>();
-                    auto no = falsey<BooleanType>();
-                    lower_bound_m = nill;
-                    lower_bound_closed_m = no;
-                    upper_bound_m = nill;
-                    upper_bound_closed_m = no;
+                    left_bracket_m = '(';
+                    left_value_m = 0;
+                    right_value_m = 0;
+                    right_bracket_m = ')';
                 }
             }
+
+            void set_to_nan(void) {
+                left_bracket_m = '(';
+                left_value_m = std::numeric_limits<RealType>::quiet_NaN();
+                right_value_m = std::numeric_limits<RealType>::quiet_NaN();
+                right_bracket_m = ']';
+            };
     };
 
-    template<class RealType, class BooleanType>
-    std::ostream& operator<<(std::ostream& os, const libp::Interval<RealType, BooleanType>& I) {
-        os << (I.lower_bound_closed() ? '[' : '(') << I.lower_bound_value() << ", "
-           << I.upper_bound_value() << (I.upper_bound_closed() ? ']' : ')');
+    template<class RealType>
+    std::ostream& operator<<(std::ostream& os, const libp::Interval<RealType>& I) {
+        os << I.left_bracket() << I.left_value() << ',' << I.right_value() << I.right_bracket();
         return os;
     }
 
-    template<class RealType, class BooleanType>
-    class IntervalUnion /*: public MeasurableSetCRTP<IntervalUnion<RealType, BooleanType>>*/ {
+    template<class RealType>
+    class IntervalUnion {
         public:
-            IntervalUnion(Interval<RealType, BooleanType> interval) {
-                intervals.emplace_back(std::move(interval));
+            IntervalUnion() = default;
+
+            IntervalUnion(Interval<RealType> interval) {
+                if (!interval.empty()) { intervals.emplace_back(std::move(interval)); }
             }
 
-            IntervalUnion<RealType, BooleanType> operator!(void) {
-                IntervalUnion<RealType, BooleanType> complement; complement.intervals.reserve(intervals.size() + 1);
-                auto nill = zero<RealType>();
-                auto inf = infinity<RealType>();
-                auto no = falsey<BooleanType>();
-                if (intervals.size() == 0) {
-                    Interval<RealType, BooleanType> real_line;
-                    real_line.lower_bound_m = -inf;
-                    real_line.upper_bound = inf;
-                    real_line.lower_bound_closed_m = no;
-                    real_line.upper_bound_closed_m = no;
-                    complement.intervals.emplace_back(std::move(real_line));
-                } else {
-                    const auto& first_interval = intervals.front();
-                    Interval<RealType, BooleanType> new_first_interval;
-                    auto first_interval_unbounded_below = first_interval.lower_bound_m == -inf;
-                    new_first_interval.lower_bound_m = where(first_interval_unbounded_below, nill, -inf);
-                    new_first_interval.upper_bound = where(first_interval_unbounded_below, nill, first_interval.lower_bound_m);
-                    new_first_interval.lower_bound_closed_m = no;
-                    new_first_interval.upper_bound_closed_m = where(first_interval_unbounded_below, no, !first_interval.lower_bound_closed_m);
-                    if (!new_first_interval.uncanonically_empty()) {
-                        complement.intervals.emplace_back(std::move(new_first_interval));
-                    }
-
-                    auto intervals_size = intervals.size();
-                    for (decltype(intervals_size) i = 0; i != intervals_size-1; ++i) {
-                        Interval<RealType, BooleanType> new_interval;
-                        new_interval.lower_bound_m = intervals[i].upper_bound;
-                        new_interval.upper_bound = intervals[i+1].lower_bound_m;
-                        new_interval.lower_bound_closed_m = !intervals[i].upper_bound_closed_m;
-                        new_interval.upper_bound_closed_m = !intervals[i+1].lower_bound_closed_m;
-                        complement.intervals.emplace_back(std::move(new_interval));
-                    }
-
-                    const auto& last_interval = intervals.last();
-                    Interval<RealType, BooleanType> new_last_interval;
-                    auto last_interval_unbounded_above = (last_interval.upper_bound == inf);
-                    new_last_interval.lower_bound_m = where(last_interval_unbounded_above, nill, inf);
-                    new_last_interval.upper_bound = where(last_interval_unbounded_above, nill, -inf);
-                    new_last_interval.lower_bound_closed_m = where(last_interval_unbounded_above, no, !last_interval.upper_bound_closed_m);
-                    new_last_interval.upper_bound_closed_m = no;
-                    if (!new_last_interval.empty()) {
-                        complement.intervals.emplace_back(std::move(new_last_interval));
+            IntervalUnion(std::initializer_list<Interval<RealType>> l) {
+                for (const auto& interval : l) {
+                    if (interval.isnan()) {
+                        intervals.clear();
+                        intervals.emplace_back(interval);
+                        return;
+                    } else if (!interval.empty()) {
+                        intervals.emplace_back(interval);
                     }
                 }
-                return complement;
+                canonicalise_unempty_intervals();
             }
 
-            IntervalUnion operator&&(const IntervalUnion& rhs) {
-                // Right now this function works only with intervals defined by scalars
-                // (RealType == double, BooleanType == bool) and not by tensors
-                // (RealType == torch::Tensor, BooleanType == torch::Tensor). We might
-                // need to specialise this function for tensors, to account for the fact
-                // that tensor intervals with a mix of null and non-null intervals across
-                // tensor-indices need to have their nulls filled in by the non-null
-                // interval with the same tensor-index but the next intervals-index
-                // (by intervals-index we mean the index of the private member variable
-                // "intervals").
+            auto cbegin(void) const { return intervals.cbegin(); }
+            auto cend(void) const { return intervals.cend(); }
 
-                IntervalUnion<RealType, BooleanType> intersection;
+            bool empty(void) const { return intervals.empty(); }
+
+            bool isnan(void) const { return !empty() && intervals.front().isnan(); }
+            static IntervalUnion<RealType> nan(void) { return Interval<RealType>::nan(); }
+
+            IntervalUnion<RealType> inv(bool extended_real_line = false) const {
+                if (intervals.size() == 0) {
+                    return Interval<RealType>(
+                        extended_real_line ? '[' : '(',
+                        -std::numeric_limits<RealType>::infinity(),
+                        std::numeric_limits<RealType>::infinity(),
+                        extended_real_line ? ']' : ')'
+                    );
+                } else {
+                    const auto& first_interval = intervals.front();
+                    if (first_interval.isnan()) {
+                        return *this;
+                    } else {
+                        auto intervals_size = intervals.size();
+
+                        IntervalUnion<RealType> complement; complement.intervals.reserve(intervals_size + 1);
+                        
+                        Interval<RealType> new_first_interval(
+                            extended_real_line ? '[' : '(',
+                            -std::numeric_limits<RealType>::infinity(),
+                            first_interval.left_value(),
+                            first_interval.inv_left_bracket()
+                        );
+                        if (!new_first_interval.empty()) {
+                            complement.intervals.emplace_back(new_first_interval);
+                        }
+
+                        for (decltype(intervals_size) i = 0; i != intervals_size-1; ++i) {
+                            complement.intervals.emplace_back(
+                                intervals[i].inv_right_bracket(),
+                                intervals[i].right_value(),
+                                intervals[i+1].left_value(),
+                                intervals[i+1].inv_left_bracket()
+                            );
+                        }
+
+                        const auto& last_interval = intervals.last();
+                        Interval<RealType> new_last_interval(
+                            last_interval.inv_right_bracket(),
+                            last_interval.right_value(),
+                            std::numeric_limits<RealType>::infinity(),
+                            extended_real_line ? ']' : ')'
+                        );
+                        if (!new_last_interval.empty()) {
+                            complement.intervals.emplace_back(std::move(new_last_interval));
+                        }
+
+                        return complement;
+                    }
+                }
+            }
+
+            IntervalUnion<RealType> operator!() const {
+                const auto& front = intervals.front();
+                const auto& back = intervals.back();
+                return inv(
+                    !empty() && (
+                        front.left_value() == -std::numeric_limits<RealType>::infinity() && front.left_bracket() == '[' ||
+                        back.right_value() == std::numeric_limits<RealType>::infinity() && back.right_bracket() == ']'
+                    )
+                );
+            }
+
+            IntervalUnion<RealType> operator&&(const IntervalUnion<RealType>& rhs) const {
+                if (isnan() || rhs.isnan()) { return nan(); }
+                IntervalUnion<RealType> intersection; intersection.intervals.reserve(std::max(intervals.size(), rhs.intervals.size()));
                 if (intervals.size() != 0 && rhs.intervals.size() != 0) {
                     auto lhs_iter = intervals.cbegin();
                     auto lhs_end = intervals.cend();
                     auto rhs_iter = rhs.intervals.cbegin();
                     auto rhs_end = rhs.intervals.cend();
+                    auto I = *lhs_iter;
                     auto J = *rhs_iter;
-                    while (true) {
-                        bool lhsi_lteq_J = lhs_iter->lower_bound_m <= J->lower_bound_m;
-                        auto I = where(lhsi_lteq_J, *lhs_iter, J);
-                        J = where(lhsi_lteq_J, J, *lhs_iter);
-                        canonicalise_interval_intersection(I,J); // This call sets I to I and J, and sets J to J\I.
+                    while (lhs_iter != lhs_end && rhs_iter != rhs_end) {
+                        std::tie(I,J) = interval_intersection_right_remainder(I,J);
                         if (!I.empty()) { intersection.intervals.emplace_back(std::move(I)); }
-                        if (++lhs_iter == lhs_end) { return intersection; }
-                        if (J.empty()) {
-                            if (++rhs_iter == rhs_end) { return intersection; }
-                            J = *rhs_iter;
+                        if (J.right_value() == rhs_iter->right_value() && J.right_bracket() == rhs_iter->right_bracket()) {
+                            ++lhs_iter;
+                        } else {
+                            ++rhs_iter;
                         }
                     }
                 }
                 return intersection;
             }
 
-            IntervalUnion operator||(const IntervalUnion& rhs) {
-                // See message at top of IntervalUnion function above.
-                // Right now we are implementing this using demorgan's laws,
-                // but we should eventually replace this with a more
-                // (memory and time) efficient solution once we have a
-                // version of operator&& that can handle vectors.
+            IntervalUnion<RealType> operator||(const IntervalUnion<RealType>& rhs) const {
+                if (isnan() || rhs.isnan()) { return nan(); }
+                IntervalUnion<RealType> set_union; set_union.intervals.reserve(std::max(intervals.size(), rhs.intervals.size()));
+                auto lhs_iter = intervals.cbegin();
+                auto rhs_iter = rhs.intervals.cbegin();
+                while (lhs_iter != intervals.cend() && rhs_iter != intervals.cend()) {
+                    if (
+                        lhs_iter->left_value() < rhs_iter->left_value() ||
+                        lhs_iter->left_value() == rhs_iter->left_value() && lhs_iter->left_bracket() == '[' && rhs_iter->left_bracket() == '('
+                    ) {
+                        set_union.intervals.emplace_back(*lhs_iter++);
+                    } else {
+                        set_union.intervals.emplace_back(*rhs_iter++);
+                    }
+                }
+                set_union.intervals.insert(set_union.intervals.end(), lhs_iter, intervals.cend());
+                set_union.intervals.insert(set_union.intervals.end(), rhs_iter, rhs.intervals.cend());
+                set_union.canonicalise_sorted_unempty_intervals();
+                return set_union;
+            }
 
-                auto& lhs = *this;
-                return !(!lhs && !rhs);
+            bool operator==(const IntervalUnion<RealType>& rhs) const {
+                // Change this to default when migrating to C++20.
+                return intervals == rhs.intervals;
+            }
+
+            bool operator!=(const IntervalUnion<RealType>& rhs) const {
+                // Change this to default when migrating to C++20.
+                return intervals != rhs.intervals;
             }
 
         private:
-            std::vector<Interval<RealType, BooleanType>> intervals;
+            std::vector<Interval<RealType>> intervals;
 
-            void canonicalise_interval_intersection(
-                Interval<RealType, BooleanType>& I,
-                Interval<RealType, BooleanType>& J
-            ) {
-                // Assumes that I and J are nonempty and in their canonical forms.
-                // Assumes that I.lower_bound_m <= J.lower_bound_m.
-                // Ensures that I and J on input equals I on output.
-                // Ensures that J on output equals J\I on input.
-                
-                auto nill = zero<RealType>();
-                auto no = falsey<BooleanType>();
-
-                auto null_I_out = J.lower_bound_m > I.upper_bound || (J.lower_bound_m == I.upper_bound && I.upper_bound_open() && J.lower_bound_open());
-                auto null_J_out = J.upper_bound < I.upper_bound || (J.upper_bound == I.upper_bound && (I.upper_bound_closed() || J.upper_bound_open()));
-
-                Interval<RealType, BooleanType> I_out;
-                I_out.lower_bound_m = where(null_I_out, nill, J.lower_bound_m);
-                I_out.upper_bound = where(null_I_out, nill, min(I.upper_bound, J.upper_bound));
-                I_out.lower_bound_closed_m = where(
-                    null_I_out,
-                    no,
-                    where(
-                        I.lower_bound_m == J.lower_bound_m && I.lower_bound_open(),
-                        no,
-                        J.lower_bound_closed_m
+            static auto interval_intersection_right_remainder(const Interval<RealType>& I, const Interval<RealType>& J) {
+                auto interval_intersection = Interval<RealType>(
+                    (
+                        I.left_value() < J.left_value()  ? J.left_bracket() :
+                        I.left_value() == J.left_value() ? std::min(I.left_bracket(), J.left_bracket()) :
+                                                           I.left_bracket()
+                    ),
+                    std::max(I.left_value(), J.left_value()),
+                    std::min(I.right_value(), J.right_value()),
+                    (
+                        I.right_value() < J.right_value()  ? I.right_bracket() :
+                        I.right_value() == J.right_value() ? std::min(I.right_bracket(), J.right_bracket()) :
+                                                             I.right_bracket()
                     )
                 );
-                I_out.upper_bound_closed_m = where(
-                    null_I_out,
-                    no,
-                    where(
-                        I.upper_bound < J.upper_bound,
-                        I.upper_bound_closed_m,
-                        J.upper_bound_closed_m
-                    )
-                );
-
-                Interval<RealType, BooleanType> J_out;
-                J_out.lower_bound_m = where(null_J_out, nill, max(J.lower_bound_m, I.upper_bound));
-                J_out.upper_bound = where(null_J_out, nill, J.upper_bound);
-                J_out.lower_bound_closed_m = where(
-                    null_J_out,
-                    no,
-                    where(
-                        I.upper_bound == J.lower_bound_m && I.upper_bound_closed(),
-                        no,
-                        J.lower_bound_closed_m
-                    )
-                );
-                J_out.upper_bound_closed_m = where(null_J_out, nill, J.upper_bound_closed_m);
-
-                I = I_out;
-                J = J_out;
+                auto right_remainder = [&]() {
+                    if (interval_intersection.empty()) {
+                        return I.left_value() < J.left_value() ? J : I;
+                    }
+                    return Interval<RealType>(
+                        interval_intersection.right_bracket() == ')' ? '[' : '(',
+                        interval_intersection.right_value(),
+                        std::max(I.right_value(), J.right_value()),
+                        (
+                            I.right_value() < J.right_value()  ? J.right_bracket() :
+                            I.right_value() == J.right_value() ? std::max(I.right_bracket(), J.right_bracket()) :
+                                                                 I.right_bracket()
+                        )
+                    );
+                }();
+                return std::make_pair(interval_intersection, right_remainder);
             }
 
-            void canonicalise_interval_union(
-                Interval<RealType, BooleanType>& I,
-                Interval<RealType, BooleanType>& J
-            ) {
-                // Assumes that I and J are nonempty and in their canonical forms.
-                // Assumes that I.lower_bound <= J.lower_bound.
-                // Ensures that a < b for all a in I and b in J on output.
-                // Also ensures I U J on input equals I U J on output.
+            static bool canonicalise_interval_union(Interval<RealType>& I, const Interval<RealType>& J) {
+                // If I and J are distinct, return true and leave I unchanged, otherwise return false and set I to IUJ.
 
-                auto nill = zero<RealType>();
-                auto yes = truthy<BooleanType>();
-                auto no = falsey<BooleanType>();
+                if (
+                    (I.left_value() < J.right_value() && J.left_value() < I.right_value()) ||
+                    (I.right_value() == J.left_value() && (I.right_bracket() == ']' || J.left_bracket() == '[')) ||
+                    (J.right_value() == I.left_value() && (J.right_bracket() == ']' || I.left_bracket() == '['))
+                ) {
+                    I.left_bracket_m = (
+                        I.left_value() < J.left_value()  ? I.left_bracket() :
+                        I.left_value() == J.left_value() ? std::max(I.left_bracket(), J.left_bracket()) :
+                                                           J.left_bracket()
+                    );
+                    I.left_value_m = std::min(I.left_value(), J.left_value());
+                    
+                    I.right_bracket_m = (
+                        I.right_value() < J.right_value()  ? J.right_bracket() :
+                        I.right_value() == J.right_value() ? std::max(I.right_bracket(), J.right_bracket()) :
+                                                             I.right_bracket()
+                    );
+                    I.right_value_m = std::max(I.right_value(), J.right_value());
 
-                auto one_interval = J.lower_bound_m < I.upper_bound || (J.lower_bound_m == I.upper_bound && (I.upper_bound_closed() || J.lower_bound_closed_m()));
-                
-                Interval<RealType, BooleanType> I_out;
-                I_out.upper_bound = where(one_interval, J.upper_bound, I.upper_bound);
-                I_out.lower_bound_closed_m = where(I.lower_bound_m == J.lower_bound_m && J.lower_bound_closed(), yes, I.lower_bound_closed());
-                I_out.upper_bound_closed_m = where(
-                    one_interval,
-                    where(
-                        I.upper_bound == J.upper_bound && I.upper_bound_closed_m(),
-                        yes,
-                        J.upper_bound_closed_m
-                    ),
-                    I.upper_bound_closed_m
+                    return false;
+                }
+
+                return true;
+            }
+
+            void canonicalise_sorted_unempty_intervals(void) {                  
+                auto writing_iter = intervals.begin();
+                for (auto reading_iter = intervals.cbegin() + 1; reading_iter < intervals.cend(); ++reading_iter) {
+                    if (canonicalise_interval_union(*writing_iter, *reading_iter)) {
+                        *(++writing_iter) = *reading_iter;
+                    }
+                }
+                intervals.erase(writing_iter, intervals.end());
+            }
+
+            void canonicalise_unempty_intervals(void) {
+                std::sort(
+                    intervals.begin(),
+                    intervals.end(),
+                    [](const Interval<RealType>& I, const Interval<RealType>& J) {
+                        return (
+                            I.left_value() < J.left_value() ||
+                            I.left_value() == J.left_value() && I.left_bracket() == '[' && J.left_bracket() == '('
+                        );
+                    }
                 );
-                
-                I = I_out;
-                J.lower_bound_m = where(one_interval, nill, J.lower_bound_m);
-                J.upper_bound = where(one_interval, nill, J.upper_bound);
-                J.lower_bound_closed_m = where(one_interval, no, J.lower_bound_closed_m);
-                J.upper_bound_closed_m = where(one_interval, no, J.upper_bound_closed_m);
+                canonicalise_sorted_unempty_intervals();
             }
     };
+
+    template<class RealType>
+    std::ostream& operator<<(std::ostream& os, const libp::IntervalUnion<RealType>& A) {
+        for (auto iter = A.cbegin(); iter != A.cend(); ++iter) {
+            os << *iter;
+        }
+        return os;
+    }
 
 }
 
