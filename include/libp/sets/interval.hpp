@@ -4,8 +4,11 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <ostream>
 #include <iterator>
 #include <limits>
+#include <ostream>
+#include <string>
 #include <utility>
 #include <vector>
 #include <libp/internal/constants.hpp>
@@ -120,6 +123,27 @@ namespace libp {
     }
 
     template<class RealType>
+    std::istream& operator>>(std::istream& is, libp::Interval<RealType>& I) {
+        char left_bracket; if (!(is >> left_bracket)) { return is; }
+        RealType left_value; if (!(is >> left_value)) { return is; }
+
+        char comma;
+        if (!(is >> comma)) { return is; }
+        if (comma != ',') {
+            is.setstate(std::ios_base::failbit);
+            return is;
+        }
+
+        RealType right_value; if (!(is >> right_value)) { return is; }
+        char right_bracket; if (!(is >> right_bracket)) { return is; }
+
+        libp::Interval<RealType> J(left_bracket, left_value, right_value, right_bracket);
+        std::swap(I,J);
+        
+        return is;
+    }
+
+    template<class RealType>
     class IntervalUnion {
         public:
             IntervalUnion() = default;
@@ -128,18 +152,25 @@ namespace libp {
                 if (!interval.empty()) { intervals.emplace_back(std::move(interval)); }
             }
 
-            IntervalUnion(std::initializer_list<Interval<RealType>> l) {
-                for (const auto& interval : l) {
-                    if (interval.isnan()) {
+            template<class InputIt>
+            IntervalUnion(InputIt first, InputIt last) {
+                intervals.reserve(std::distance(first, last));
+                for (auto iter = first; iter != last; ++iter) {
+                    const Interval<RealType>& I = *iter;
+                    if (I.isnan()) {
                         intervals.clear();
-                        intervals.emplace_back(interval);
+                        intervals.emplace_back(I);
                         return;
-                    } else if (!interval.empty()) {
-                        intervals.emplace_back(interval);
+                    } else if (!I.empty()) {
+                        intervals.emplace_back(I);
                     }
                 }
                 canonicalise_unempty_intervals();
             }
+
+            IntervalUnion(std::initializer_list<Interval<RealType>> l):
+                IntervalUnion(l.begin(), l.end())
+            { }
 
             auto cbegin(void) const { return intervals.cbegin(); }
             auto cend(void) const { return intervals.cend(); }
@@ -337,7 +368,7 @@ namespace libp {
                         *(++writing_iter) = *reading_iter;
                     }
                 }
-                intervals.erase(writing_iter, intervals.end());
+                intervals.erase(++writing_iter, intervals.end());
             }
 
             void canonicalise_unempty_intervals(void) {
@@ -357,10 +388,41 @@ namespace libp {
 
     template<class RealType>
     std::ostream& operator<<(std::ostream& os, const libp::IntervalUnion<RealType>& A) {
-        for (auto iter = A.cbegin(); iter != A.cend(); ++iter) {
-            os << *iter;
+        if (A.empty()) {
+            os << libp::Interval<RealType>('(',0,0,')');
+        } else {
+            for (auto iter = A.cbegin(); iter != A.cend(); ++iter) {
+                os << *iter;
+            }
         }
+        os << ';';
         return os;
+    }
+
+    template<class RealType>
+    std::istream& operator>>(std::istream& is, libp::IntervalUnion<RealType>& A) {
+        std::vector<libp::Interval<RealType>> intervals;
+        for (libp::Interval<RealType> I; is >> I; ) {
+            intervals.emplace_back(std::move(I));
+        }
+
+        auto populate_A = [&]() { libp::IntervalUnion<RealType> B(intervals.cbegin(), intervals.cend()); std::swap(A,B); };
+
+        if (is.eof()) {
+            populate_A();
+            return is;
+        }
+
+        if (is.fail()) {
+            is.clear();
+            if (char c; is >> c && c == ';') {
+                populate_A();
+            } else {
+                is.setstate(std::ios_base::failbit);
+            }
+        }
+
+        return is;
     }
 
 }
