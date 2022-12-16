@@ -13,8 +13,6 @@
 #include <boost/test/unit_test.hpp>
 #include <libp/sets/interval.hpp>
 
-#include <iostream>
-
 BOOST_AUTO_TEST_CASE(simple_interval_test) {
     BOOST_TEST(libp::Interval('(',1.0,-1.0,')') == libp::Interval('(',0.0,0.0,')'));
     
