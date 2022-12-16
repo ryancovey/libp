@@ -46,8 +46,8 @@ namespace libp {
                     std::isnan(left_value_m) || std::isnan(right_value_m)
                 ) {
                     set_to_nan();
-                } else {
-                    canonicalise();
+                } else if (isempty()) {
+                    set_to_empty();
                 }
             }
 
@@ -62,13 +62,19 @@ namespace libp {
             auto open(void) const { return left_bracket() == '(' && right_bracket() == ')'; }
             auto closed(void) const { return left_bracket() == '[' && right_bracket() == ']'; }
 
-            auto empty(void) const {
+            auto isempty(void) const {
                 // Does not assume that we're in a canonical representation, but does assume that the
                 // left bracket is '(' or '[', likewise for the right bracket. Returns false if NaN.
                 return ((left_value_m == right_value_m && !closed()) || left_value_m > right_value_m);
             }
 
             auto isnan(void) const { return std::isnan(left_value_m); }
+
+            RealType operator()(const RealType& x) const {
+                return (left_value() < x && x < right_value()) ||
+                    (x == left_value() && left_bracket() == '[') ||
+                    (x == right_value() && right_bracket() == ']');
+            }
 
             template<class T>
             bool operator==(const Interval<T>& rhs) const {
@@ -87,6 +93,10 @@ namespace libp {
                 }
             }
 
+            static Interval<RealType> empty(void) {
+                return {};
+            }
+
             static Interval<RealType> nan(void) {
                 Interval<RealType> ret;
                 ret.set_to_nan();
@@ -99,13 +109,11 @@ namespace libp {
             char left_bracket_m;
             char right_bracket_m;
 
-            void canonicalise(void) {
-                if (empty()) {
-                    left_bracket_m = '(';
-                    left_value_m = 0;
-                    right_value_m = 0;
-                    right_bracket_m = ')';
-                }
+            void set_to_empty(void) {
+                left_bracket_m = '(';
+                left_value_m = 0;
+                right_value_m = 0;
+                right_bracket_m = ')';
             }
 
             void set_to_nan(void) {
@@ -149,8 +157,12 @@ namespace libp {
             IntervalUnion() = default;
 
             IntervalUnion(Interval<RealType> interval) {
-                if (!interval.empty()) { intervals.emplace_back(std::move(interval)); }
+                if (!interval.isempty()) { intervals.emplace_back(std::move(interval)); }
             }
+
+            IntervalUnion(char left_bracket_in, RealType left_value_in, RealType right_value_in, char right_bracket_in):
+                IntervalUnion(Interval<RealType>(left_bracket_in, left_value_in, right_value_in, right_bracket_in))
+            { }
 
             template<class InputIt>
             IntervalUnion(InputIt first, InputIt last) {
@@ -161,7 +173,7 @@ namespace libp {
                         intervals.clear();
                         intervals.emplace_back(I);
                         return;
-                    } else if (!I.empty()) {
+                    } else if (!I.isempty()) {
                         intervals.emplace_back(I);
                     }
                 }
@@ -172,13 +184,20 @@ namespace libp {
                 IntervalUnion(l.begin(), l.end())
             { }
 
+            IntervalUnion(std::vector<Interval<RealType>> intervals_in):
+                intervals(std::move(intervals_in))
+            { }
+
             auto cbegin(void) const { return intervals.cbegin(); }
             auto cend(void) const { return intervals.cend(); }
 
-            bool empty(void) const { return intervals.empty(); }
+            bool isempty(void) const { return intervals.empty(); }
 
-            bool isnan(void) const { return !empty() && intervals.front().isnan(); }
+            bool isnan(void) const { return !isempty() && intervals.front().isnan(); }
+
+            static IntervalUnion<RealType> empty(void) { return {}; }
             static IntervalUnion<RealType> nan(void) { return Interval<RealType>::nan(); }
+
 
             IntervalUnion<RealType> inv(bool extended_real_line = false) const {
                 if (intervals.size() == 0) {
@@ -203,7 +222,7 @@ namespace libp {
                             first_interval.left_value(),
                             first_interval.inv_left_bracket()
                         );
-                        if (!new_first_interval.empty()) {
+                        if (!new_first_interval.isempty()) {
                             complement.intervals.emplace_back(new_first_interval);
                         }
 
@@ -216,14 +235,14 @@ namespace libp {
                             );
                         }
 
-                        const auto& last_interval = intervals.last();
+                        const auto& last_interval = intervals.back();
                         Interval<RealType> new_last_interval(
                             last_interval.inv_right_bracket(),
                             last_interval.right_value(),
                             std::numeric_limits<RealType>::infinity(),
                             extended_real_line ? ']' : ')'
                         );
-                        if (!new_last_interval.empty()) {
+                        if (!new_last_interval.isempty()) {
                             complement.intervals.emplace_back(std::move(new_last_interval));
                         }
 
@@ -255,7 +274,7 @@ namespace libp {
                     auto J = *rhs_iter;
                     while (lhs_iter != lhs_end && rhs_iter != rhs_end) {
                         std::tie(I,J) = interval_intersection_right_remainder(I,J);
-                        if (!I.empty()) { intersection.intervals.emplace_back(std::move(I)); }
+                        if (!I.isempty()) { intersection.intervals.emplace_back(std::move(I)); }
                         if (J.right_value() == rhs_iter->right_value() && J.right_bracket() == rhs_iter->right_bracket()) {
                             ++lhs_iter;
                         } else {
@@ -297,6 +316,18 @@ namespace libp {
                 return intervals != rhs.intervals;
             }
 
+            RealType operator()(const RealType& x) const {
+                auto iter = std::lower_bound(
+                    intervals.cbegin(),
+                    intervals.cend(),
+                    x,
+                    [](const Interval<RealType>& I, const RealType& y) {
+                        return I.right_value() < y;
+                    }
+                );
+                return iter == intervals.cend() ? 0 : (*iter)(x);
+            }
+
         private:
             std::vector<Interval<RealType>> intervals;
 
@@ -316,7 +347,7 @@ namespace libp {
                     )
                 );
                 auto right_remainder = [&]() {
-                    if (interval_intersection.empty()) {
+                    if (interval_intersection.isempty()) {
                         return I.left_value() < J.left_value() ? J : I;
                     }
                     return Interval<RealType>(
@@ -388,7 +419,7 @@ namespace libp {
 
     template<class RealType>
     std::ostream& operator<<(std::ostream& os, const libp::IntervalUnion<RealType>& A) {
-        if (A.empty()) {
+        if (A.isempty()) {
             os << libp::Interval<RealType>('(',0,0,')');
         } else {
             for (auto iter = A.cbegin(); iter != A.cend(); ++iter) {
