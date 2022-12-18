@@ -8,6 +8,7 @@
 #include <iterator>
 #include <limits>
 #include <ostream>
+#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -132,7 +133,16 @@ namespace libp {
 
     template<class RealType>
     std::istream& operator>>(std::istream& is, libp::Interval<RealType>& I) {
+        // Ideally, this should leave stream contents unchanged on failure,
+        // which is currently not the case.
+
         char left_bracket; if (!(is >> left_bracket)) { return is; }
+        if (left_bracket != '(' && left_bracket != '[') {
+            is.putback(left_bracket);
+            is.setstate(std::ios_base::failbit);
+            return is;
+        }
+
         RealType left_value; if (!(is >> left_value)) { return is; }
 
         char comma;
@@ -182,10 +192,6 @@ namespace libp {
 
             IntervalUnion(std::initializer_list<Interval<RealType>> l):
                 IntervalUnion(l.begin(), l.end())
-            { }
-
-            IntervalUnion(std::vector<Interval<RealType>> intervals_in):
-                intervals(std::move(intervals_in))
             { }
 
             auto cbegin(void) const { return intervals.cbegin(); }
@@ -290,7 +296,7 @@ namespace libp {
                 IntervalUnion<RealType> set_union; set_union.intervals.reserve(std::max(intervals.size(), rhs.intervals.size()));
                 auto lhs_iter = intervals.cbegin();
                 auto rhs_iter = rhs.intervals.cbegin();
-                while (lhs_iter != intervals.cend() && rhs_iter != intervals.cend()) {
+                while (lhs_iter != intervals.cend() && rhs_iter != rhs.intervals.cend()) {
                     if (
                         lhs_iter->left_value() < rhs_iter->left_value() ||
                         lhs_iter->left_value() == rhs_iter->left_value() && lhs_iter->left_bracket() == '[' && rhs_iter->left_bracket() == '('
@@ -433,20 +439,27 @@ namespace libp {
     template<class RealType>
     std::istream& operator>>(std::istream& is, libp::IntervalUnion<RealType>& A) {
         std::vector<libp::Interval<RealType>> intervals;
+        bool isnan = false;
         for (libp::Interval<RealType> I; is >> I; ) {
-            intervals.emplace_back(std::move(I));
+            if (!isnan) {
+                if (I.isnan()) {
+                    isnan = true;
+                    intervals.clear();
+                }
+                if (!I.isempty()) {
+                    intervals.emplace_back(std::move(I));
+                }
+            }
         }
 
         auto populate_A = [&]() { libp::IntervalUnion<RealType> B(intervals.cbegin(), intervals.cend()); std::swap(A,B); };
 
         if (is.eof()) {
             populate_A();
-            return is;
-        }
-
-        if (is.fail()) {
+        } else if (is.fail()) {
             is.clear();
-            if (char c; is >> c && c == ';') {
+            char c;
+            if (is >> c && c == ';') {
                 populate_A();
             } else {
                 is.setstate(std::ios_base::failbit);

@@ -13,6 +13,8 @@
 #include <boost/test/unit_test.hpp>
 #include <libp/sets/interval.hpp>
 
+#include <iostream>
+
 BOOST_AUTO_TEST_CASE(simple_interval_test) {
     BOOST_TEST(libp::Interval('(',1.0,-1.0,')') == libp::Interval('(',0.0,0.0,')'));
     
@@ -101,14 +103,14 @@ struct SetPairDist {
                         if (first_boundaries.empty()) {
                             to_repeat = 2;
                         } else {
-                            third_boundaries.push_back(first_boundaries[finite_boundaries_dist(eng) % first_boundaries.size()]);
+                            third_boundaries.push_back(first_boundaries.at(finite_boundaries_dist(eng) % first_boundaries.size()));
                         }
                     }
                     if (to_repeat == 2) {
                         if (second_boundaries.empty()) {
                             to_repeat = 3;
                         } else {
-                            third_boundaries.push_back(second_boundaries[finite_boundaries_dist(eng) % second_boundaries.size()]);
+                            third_boundaries.push_back(second_boundaries.at(finite_boundaries_dist(eng) % second_boundaries.size()));
                         }
                     }
                     if (to_repeat == 3) {
@@ -128,24 +130,24 @@ struct SetPairDist {
         std::sort(boundaries.begin(), boundaries.end());
         
         std::vector<libp::Interval<double>> intervals; intervals.reserve(boundaries.size()/2);
-        for (decltype(boundaries.size()) i = 0; i < boundaries.size() - 1; i += 2) {
+        for (decltype(boundaries.size()) i = 0; i+1 < boundaries.size(); i += 2) {
             intervals.emplace_back(
                 closed_bracket_dist(eng) ? '[' : '(',
-                boundaries[i],
-                boundaries[i+1],
+                boundaries.at(i),
+                boundaries.at(i+1),
                 closed_bracket_dist(eng) ? ']' : ')'
             );
         }
 
-        return libp::IntervalUnion<double>(std::move(intervals));
+        return libp::IntervalUnion<double>(intervals.begin(), intervals.end());
     }
 
     auto operator()(void) {
         std::array<std::vector<uint64_t>, 3> boundaries;
         std::array<libp::IntervalUnion<double>, 3> sets;
         for (int i = 0; i != 3; ++i) {
-            draw_third_boundaries(boundaries[i], boundaries[(i+2)%3], boundaries[(i+1)%3]);
-            sets[i] = draw_set_from_boundaries(boundaries[i]);
+            draw_third_boundaries(boundaries.at(i), boundaries.at((i+2)%3), boundaries.at((i+1)%3));
+            sets.at(i) = draw_set_from_boundaries(boundaries.at(i));
         }
         return sets;
     }
@@ -319,14 +321,19 @@ BOOST_AUTO_TEST_CASE(complex_interval_test) {
     std::filesystem::path test_cases_path = "interval_test_cases.txt";
     {
         std::ifstream test_cases{test_cases_path};
-        while (pass = pass && (test_cases >> sets[0])) {
-            test_cases >> sets[1];
+        while (true) {
+            test_cases >> sets.at(0);
+            if (test_cases.eof()) { break; }
             BOOST_TEST(test_cases.good());
-            if (!test_cases.good()) { pass = false; continue; }
+            if (!test_cases.good()) { pass = false; break; }
+
+            test_cases >> sets.at(1);
+            BOOST_TEST(test_cases.good());
+            if (!test_cases.good()) { pass = false; break; }
             
-            test_cases >> sets[2];
+            test_cases >> sets.at(2);
             BOOST_TEST(test_cases.good());
-            if (!test_cases.good()) { pass = false; continue; }
+            if (!test_cases.good()) { pass = false; break; }
 
             pass = test_sets_pair_triple(sets);
         }
