@@ -13,7 +13,7 @@
 #include <boost/test/unit_test.hpp>
 #include <libp/sets/interval.hpp>
 
-#include <iostream>
+// #include <iostream>
 
 BOOST_AUTO_TEST_CASE(simple_interval_test) {
     BOOST_TEST(libp::Interval('(',1.0,-1.0,')') == libp::Interval('(',0.0,0.0,')'));
@@ -346,6 +346,7 @@ BOOST_AUTO_TEST_CASE(complex_interval_test) {
             pass = test_sets_pair_triple(sets);
             if (!pass) {
                 std::ofstream test_cases{test_cases_path};
+                test_cases.precision(std::numeric_limits<double>::max_digits10);
                 for (const auto& A : sets) { test_cases << A; }
                 test_cases << std::endl;
             }

@@ -54,11 +54,9 @@ namespace libp {
 
             auto left_value(void) const { return left_value_m; }
             auto left_bracket(void) const { return left_bracket_m; }
-            auto inv_left_bracket(void) const { return left_bracket_m == '(' ? '[' : '('; }
 
             auto right_value(void) const { return right_value_m; }
             auto right_bracket(void) const { return right_bracket_m; }
-            auto inv_right_bracket(void) const { return right_bracket_m == ')' ? ']' : ')'; }
 
             auto open(void) const { return left_bracket() == '(' && right_bracket() == ')'; }
             auto closed(void) const { return left_bracket() == '[' && right_bracket() == ']'; }
@@ -226,7 +224,7 @@ namespace libp {
                             extended_real_line ? '[' : '(',
                             -std::numeric_limits<RealType>::infinity(),
                             first_interval.left_value(),
-                            first_interval.inv_left_bracket()
+                            first_interval.left_bracket() == '[' ? ')' : ']'
                         );
                         if (!new_first_interval.isempty()) {
                             complement.intervals.emplace_back(new_first_interval);
@@ -234,16 +232,16 @@ namespace libp {
 
                         for (decltype(intervals_size) i = 0; i != intervals_size-1; ++i) {
                             complement.intervals.emplace_back(
-                                intervals[i].inv_right_bracket(),
+                                intervals[i].right_bracket() == ']' ? '(' : '[',
                                 intervals[i].right_value(),
                                 intervals[i+1].left_value(),
-                                intervals[i+1].inv_left_bracket()
+                                intervals[i+1].left_bracket() == '[' ? ')' : ']'
                             );
                         }
 
                         const auto& last_interval = intervals.back();
                         Interval<RealType> new_last_interval(
-                            last_interval.inv_right_bracket(),
+                            last_interval.right_bracket() == ']' ? '(' : '[',
                             last_interval.right_value(),
                             std::numeric_limits<RealType>::infinity(),
                             extended_real_line ? ']' : ')'
@@ -262,8 +260,8 @@ namespace libp {
                 const auto& back = intervals.back();
                 return inv(
                     !empty() && (
-                        front.left_value() == -std::numeric_limits<RealType>::infinity() && front.left_bracket() == '[' ||
-                        back.right_value() == std::numeric_limits<RealType>::infinity() && back.right_bracket() == ']'
+                        (front.left_value() == -std::numeric_limits<RealType>::infinity() && front.left_bracket() == '[') ||
+                        (back.right_value() == std::numeric_limits<RealType>::infinity() && back.right_bracket() == ']')
                     )
                 );
             }
