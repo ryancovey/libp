@@ -268,21 +268,24 @@ namespace libp {
 
             IntervalUnion<RealType> operator&&(const IntervalUnion<RealType>& rhs) const {
                 if (isnan() || rhs.isnan()) { return nan(); }
-                IntervalUnion<RealType> intersection; intersection.intervals.reserve(std::max(intervals.size(), rhs.intervals.size()));
+                IntervalUnion<RealType> intersection;
                 if (intervals.size() != 0 && rhs.intervals.size() != 0) {
+                    intersection.intervals.reserve(std::max(intervals.size(), rhs.intervals.size()));
                     auto lhs_iter = intervals.cbegin();
                     auto lhs_end = intervals.cend();
                     auto rhs_iter = rhs.intervals.cbegin();
                     auto rhs_end = rhs.intervals.cend();
                     auto I = *lhs_iter;
                     auto J = *rhs_iter;
-                    while (lhs_iter != lhs_end && rhs_iter != rhs_end) {
+                    while (true) {
                         std::tie(I,J) = interval_intersection_right_remainder(I,J);
                         if (!I.isempty()) { intersection.intervals.emplace_back(std::move(I)); }
                         if (J.right_value() == rhs_iter->right_value() && J.right_bracket() == rhs_iter->right_bracket()) {
-                            ++lhs_iter;
+                            if (++lhs_iter == lhs_end) { break; }
+                            I = *lhs_iter;
                         } else {
-                            ++rhs_iter;
+                            if (++rhs_iter == rhs_end) { break; }
+                            I = *rhs_iter;
                         }
                     }
                 }
@@ -347,7 +350,7 @@ namespace libp {
                     (
                         I.right_value() < J.right_value()  ? I.right_bracket() :
                         I.right_value() == J.right_value() ? std::min(I.right_bracket(), J.right_bracket()) :
-                                                             I.right_bracket()
+                                                             J.right_bracket()
                     )
                 );
                 auto right_remainder = [&]() {
