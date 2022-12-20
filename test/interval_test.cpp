@@ -154,7 +154,7 @@ struct SetPairDist {
 };
 
 BOOST_AUTO_TEST_CASE(complex_interval_test) {
-    auto n = 100; // Random test cases sample size.
+    auto n = 10000; // Random test cases sample size.
 
     constexpr auto inf = std::numeric_limits<double>::infinity();
 
@@ -294,7 +294,7 @@ BOOST_AUTO_TEST_CASE(complex_interval_test) {
             BOOST_TEST(pass = BandC.isnan()); pass_all = pass_all && pass;
         } else {
             BOOST_TEST(pass = (AorB||C) == (A||BorC)); pass_all = pass_all && pass;
-            BOOST_TEST(pass = (AandB&&C) == (A&&BorC)); pass_all = pass_all && pass;
+            BOOST_TEST(pass = (AandB&&C) == (A&&BandC)); pass_all = pass_all && pass;
             BOOST_TEST(pass = (A||BandC) == (AorB&&AorC)); pass_all = pass_all && pass;
             BOOST_TEST(pass = (A&&BorC) == (AandB||AandC)); pass_all = pass_all && pass;
         }
@@ -345,7 +345,7 @@ BOOST_AUTO_TEST_CASE(complex_interval_test) {
             sets = set_pair_dist();
             pass = test_sets_pair_triple(sets);
             if (!pass) {
-                std::ofstream test_cases{test_cases_path};
+                std::ofstream test_cases{test_cases_path, std::ios_base::out | std::ios_base::ate};
                 test_cases.precision(std::numeric_limits<double>::max_digits10);
                 for (const auto& A : sets) { test_cases << A; }
                 test_cases << std::endl;

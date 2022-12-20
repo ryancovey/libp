@@ -401,12 +401,14 @@ namespace libp {
 
             void canonicalise_sorted_unempty_intervals(void) {                  
                 auto writing_iter = intervals.begin();
-                for (auto reading_iter = intervals.cbegin() + 1; reading_iter < intervals.cend(); ++reading_iter) {
-                    if (canonicalise_interval_union(*writing_iter, *reading_iter)) {
-                        *(++writing_iter) = *reading_iter;
+                if (writing_iter != intervals.end()) {
+                    for (auto reading_iter = intervals.cbegin() + 1; reading_iter != intervals.cend(); ++reading_iter) {
+                        if (canonicalise_interval_union(*writing_iter, *reading_iter)) {
+                            *(++writing_iter) = *reading_iter;
+                        }
                     }
+                    intervals.erase(++writing_iter, intervals.end());
                 }
-                intervals.erase(++writing_iter, intervals.end());
             }
 
             void canonicalise_unempty_intervals(void) {
