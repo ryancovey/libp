@@ -154,7 +154,7 @@ struct SetPairDist {
 };
 
 BOOST_AUTO_TEST_CASE(complex_interval_test) {
-    auto n = 10000; // Random test cases sample size.
+    auto n = 100; // Random test cases sample size.
 
     constexpr auto inf = std::numeric_limits<double>::infinity();
 

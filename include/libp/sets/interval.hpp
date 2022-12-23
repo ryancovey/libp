@@ -355,7 +355,7 @@ namespace libp {
                 );
                 auto right_remainder = [&]() {
                     if (interval_intersection.isempty()) {
-                        return I.left_value() < J.left_value() ? J : I;
+                        return I.right_value() <= J.left_value() ? J : I;
                     }
                     return Interval<RealType>(
                         interval_intersection.right_bracket() == ')' ? '[' : '(',
