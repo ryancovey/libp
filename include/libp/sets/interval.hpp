@@ -11,6 +11,7 @@
 #include <ostream>
 #include <sstream>
 #include <string>
+#include <type_traits>
 #include <utility>
 #include <vector>
 #include <libp/internal/constants.hpp>
@@ -21,14 +22,25 @@
 
 namespace libp {
 
-    template<std::floating_point RealType>
+    template<class Boundary>
+    concept BoundaryConcept = requires(Boundary x, Boundary y) {
+        requires std::default_initializable<Boundary>;
+        requires std::totally_ordered<Boundary>;
+        std::min(x,y);
+        std::max(x,y);
+    };
+
+    template<BoundaryConcept Boundary>
     class IntervalUnion;
 
-    template<std::floating_point RealType>
+    template<BoundaryConcept Boundary>
     class Interval {
-        friend class IntervalUnion<RealType>;
+        template<BoundaryConcept B>
+        friend class IntervalUnion;
 
         public:
+            using boundary_type = Boundary;
+
             Interval(): 
                 left_value_m(0),
                 right_value_m(0),
@@ -36,9 +48,10 @@ namespace libp {
                 right_bracket_m(')')
             { }
 
-            Interval(char left_bracket_in, RealType left_value_in, RealType right_value_in, char right_bracket_in):
-                left_value_m(left_value_in),
-                right_value_m(right_value_in),
+            template<BoundaryConcept S, BoundaryConcept T>
+            Interval(char left_bracket_in, S left_value_in, T right_value_in, char right_bracket_in):
+                left_value_m(std::move(left_value_in)),
+                right_value_m(std::move(right_value_in)),
                 left_bracket_m(left_bracket_in),
                 right_bracket_m(right_bracket_in)
             {
@@ -52,6 +65,14 @@ namespace libp {
                     set_to_empty();
                 }
             }
+
+            template<BoundaryConcept RhsBoundary>
+            Interval(const Interval<RhsBoundary>& rhs):
+                left_value_m(rhs.left_value_m),
+                right_value_m(rhs.right_value_m),
+                left_bracket_m(rhs.left_bracket_m),
+                right_bracket_m(rhs.right_bracket_m)
+            { }
 
             auto left_value(void) const { return left_value_m; }
             auto left_bracket(void) const { return left_bracket_m; }
@@ -70,22 +91,22 @@ namespace libp {
 
             auto isnan(void) const { return std::isnan(left_value_m); }
 
-            RealType operator()(const RealType& x) const {
+            auto operator()(const Boundary& x) const {
                 return (left_value() < x && x < right_value()) ||
                     (x == left_value() && left_bracket() == '[') ||
                     (x == right_value() && right_bracket() == ']');
             }
 
-            template<std::floating_point T>
-            bool operator==(const Interval<T>& rhs) const {
+            template<BoundaryConcept B>
+            bool operator==(const Interval<B>& rhs) const {
                 return left_bracket_m == rhs.left_bracket_m &&
                     left_value_m == rhs.left_value_m &&
                     right_value_m == rhs.right_value_m &&
                     right_bracket_m == rhs.right_bracket_m;
             }
 
-            template<std::floating_point T>
-            bool operator!=(const Interval<T>& rhs) const {
+            template<BoundaryConcept B>
+            bool operator!=(const Interval<B>& rhs) const {
                 if (isnan() || rhs.isnan()) {
                     return false;
                 } else {
@@ -93,19 +114,19 @@ namespace libp {
                 }
             }
 
-            static Interval<RealType> empty(void) {
+            static Interval<Boundary> empty(void) {
                 return {};
             }
 
-            static Interval<RealType> nan(void) {
-                Interval<RealType> ret;
+            static Interval<Boundary> nan(void) {
+                Interval<Boundary> ret;
                 ret.set_to_nan();
                 return ret;
             }
 
         private:
-            RealType left_value_m;
-            RealType right_value_m;
+            Boundary left_value_m;
+            Boundary right_value_m;
             char left_bracket_m;
             char right_bracket_m;
 
@@ -118,20 +139,28 @@ namespace libp {
 
             void set_to_nan(void) {
                 left_bracket_m = '(';
-                left_value_m = std::numeric_limits<RealType>::quiet_NaN();
-                right_value_m = std::numeric_limits<RealType>::quiet_NaN();
+                left_value_m = std::numeric_limits<Boundary>::quiet_NaN();
+                right_value_m = std::numeric_limits<Boundary>::quiet_NaN();
                 right_bracket_m = ']';
             };
     };
 
-    template<std::floating_point RealType>
-    std::ostream& operator<<(std::ostream& os, const libp::Interval<RealType>& I) {
+    Interval() -> Interval<double>;
+
+    template<BoundaryConcept S, BoundaryConcept T>
+    Interval(char, S s, T t, char) -> Interval<decltype(s-t)>;
+
+    template<BoundaryConcept RhsBoundary>
+    Interval(const Interval<RhsBoundary>& rhs) -> Interval<RhsBoundary>;
+
+    template<BoundaryConcept Boundary>
+    std::ostream& operator<<(std::ostream& os, const libp::Interval<Boundary>& I) {
         os << I.left_bracket() << I.left_value() << ',' << I.right_value() << I.right_bracket();
         return os;
     }
 
-    template<std::floating_point RealType>
-    std::istream& operator>>(std::istream& is, libp::Interval<RealType>& I) {
+    template<BoundaryConcept Boundary>
+    std::istream& operator>>(std::istream& is, libp::Interval<Boundary>& I) {
         // Ideally, this should leave stream contents unchanged on failure,
         // which is currently not the case.
 
@@ -142,7 +171,7 @@ namespace libp {
             return is;
         }
 
-        RealType left_value; if (!(is >> left_value)) { return is; }
+        Boundary left_value; if (!(is >> left_value)) { return is; }
 
         char comma;
         if (!(is >> comma)) { return is; }
@@ -151,33 +180,40 @@ namespace libp {
             return is;
         }
 
-        RealType right_value; if (!(is >> right_value)) { return is; }
+        Boundary right_value; if (!(is >> right_value)) { return is; }
         char right_bracket; if (!(is >> right_bracket)) { return is; }
 
-        libp::Interval<RealType> J(left_bracket, left_value, right_value, right_bracket);
+        libp::Interval<Boundary> J(left_bracket, left_value, right_value, right_bracket);
         std::swap(I,J);
         
         return is;
     }
 
-    template<std::floating_point RealType>
+    template<BoundaryConcept Boundary>
     class IntervalUnion {
+        template<BoundaryConcept B>
+        friend class IntervalUnion;
+
         public:
+            using boundary_type = Boundary;
+
             IntervalUnion() = default;
 
-            IntervalUnion(Interval<RealType> interval) {
+            template<BoundaryConcept IntBoundary>
+            IntervalUnion(Interval<IntBoundary> interval) {
                 if (!interval.isempty()) { intervals.emplace_back(std::move(interval)); }
             }
 
-            IntervalUnion(char left_bracket_in, RealType left_value_in, RealType right_value_in, char right_bracket_in):
-                IntervalUnion(Interval<RealType>(left_bracket_in, left_value_in, right_value_in, right_bracket_in))
+            template<BoundaryConcept S, BoundaryConcept T>
+            IntervalUnion(char left_bracket_in, S left_value_in, T right_value_in, char right_bracket_in):
+                IntervalUnion(Interval<Boundary>(left_bracket_in, std::move(left_value_in), std::move(right_value_in), right_bracket_in))
             { }
 
-            template<std::forward_iterator InputIt>
-            IntervalUnion(InputIt first, InputIt last) {
+            template<std::forward_iterator Iter>
+            IntervalUnion(Iter first, Iter last) {
                 intervals.reserve(std::distance(first, last));
                 for (auto iter = first; iter != last; ++iter) {
-                    const Interval<RealType>& I = *iter;
+                    const Interval<Boundary>& I = *iter;
                     if (I.isnan()) {
                         intervals.clear();
                         intervals.emplace_back(I);
@@ -189,8 +225,13 @@ namespace libp {
                 canonicalise_unempty_intervals();
             }
 
-            IntervalUnion(std::initializer_list<Interval<RealType>> l):
+            IntervalUnion(std::initializer_list<Interval<Boundary>> l):
                 IntervalUnion(l.begin(), l.end())
+            { }
+
+            template<BoundaryConcept RhsBoundary>
+            IntervalUnion(const IntervalUnion<RhsBoundary>& rhs):
+                IntervalUnion(rhs.begin(), rhs.end())
             { }
 
             auto cbegin(void) const { return intervals.cbegin(); }
@@ -200,16 +241,16 @@ namespace libp {
 
             bool isnan(void) const { return !isempty() && intervals.front().isnan(); }
 
-            static IntervalUnion<RealType> empty(void) { return {}; }
-            static IntervalUnion<RealType> nan(void) { return Interval<RealType>::nan(); }
+            static IntervalUnion<Boundary> empty(void) { return {}; }
+            static IntervalUnion<Boundary> nan(void) { return Interval<Boundary>::nan(); }
 
 
-            IntervalUnion<RealType> inv(bool extended_real_line = false) const {
+            IntervalUnion<Boundary> inv(bool extended_real_line = false) const {
                 if (intervals.size() == 0) {
-                    return Interval<RealType>(
+                    return Interval<Boundary>(
                         extended_real_line ? '[' : '(',
-                        -std::numeric_limits<RealType>::infinity(),
-                        std::numeric_limits<RealType>::infinity(),
+                        -std::numeric_limits<Boundary>::infinity(),
+                        std::numeric_limits<Boundary>::infinity(),
                         extended_real_line ? ']' : ')'
                     );
                 } else {
@@ -219,11 +260,11 @@ namespace libp {
                     } else {
                         auto intervals_size = intervals.size();
 
-                        IntervalUnion<RealType> complement; complement.intervals.reserve(intervals_size + 1);
+                        IntervalUnion<Boundary> complement; complement.intervals.reserve(intervals_size + 1);
                         
-                        Interval<RealType> new_first_interval(
+                        Interval<Boundary> new_first_interval(
                             extended_real_line ? '[' : '(',
-                            -std::numeric_limits<RealType>::infinity(),
+                            -std::numeric_limits<Boundary>::infinity(),
                             first_interval.left_value(),
                             first_interval.left_bracket() == '[' ? ')' : ']'
                         );
@@ -241,10 +282,10 @@ namespace libp {
                         }
 
                         const auto& last_interval = intervals.back();
-                        Interval<RealType> new_last_interval(
+                        Interval<Boundary> new_last_interval(
                             last_interval.right_bracket() == ']' ? '(' : '[',
                             last_interval.right_value(),
-                            std::numeric_limits<RealType>::infinity(),
+                            std::numeric_limits<Boundary>::infinity(),
                             extended_real_line ? ']' : ')'
                         );
                         if (!new_last_interval.isempty()) {
@@ -256,20 +297,21 @@ namespace libp {
                 }
             }
 
-            IntervalUnion<RealType> operator!() const {
+            IntervalUnion<Boundary> operator!() const {
                 const auto& front = intervals.front();
                 const auto& back = intervals.back();
                 return inv(
                     !empty() && (
-                        (front.left_value() == -std::numeric_limits<RealType>::infinity() && front.left_bracket() == '[') ||
-                        (back.right_value() == std::numeric_limits<RealType>::infinity() && back.right_bracket() == ']')
+                        (front.left_value() == -std::numeric_limits<Boundary>::infinity() && front.left_bracket() == '[') ||
+                        (back.right_value() == std::numeric_limits<Boundary>::infinity() && back.right_bracket() == ']')
                     )
                 );
             }
 
-            IntervalUnion<RealType> operator&&(const IntervalUnion<RealType>& rhs) const {
+            template<BoundaryConcept RhsBoundary>
+            auto operator&&(const IntervalUnion<RhsBoundary>& rhs) const {
                 if (isnan() || rhs.isnan()) { return nan(); }
-                IntervalUnion<RealType> intersection;
+                IntervalUnion<decltype(intervals.front().left_value() - rhs.intervals.front().left_value())> intersection;
                 if (intervals.size() != 0 && rhs.intervals.size() != 0) {
                     intersection.intervals.reserve(std::max(intervals.size(), rhs.intervals.size()));
                     auto lhs_iter = intervals.cbegin();
@@ -293,9 +335,11 @@ namespace libp {
                 return intersection;
             }
 
-            IntervalUnion<RealType> operator||(const IntervalUnion<RealType>& rhs) const {
+            template<BoundaryConcept RhsBoundary>
+            auto operator||(const IntervalUnion<RhsBoundary>& rhs) const {
                 if (isnan() || rhs.isnan()) { return nan(); }
-                IntervalUnion<RealType> set_union; set_union.intervals.reserve(std::max(intervals.size(), rhs.intervals.size()));
+                IntervalUnion<decltype(intervals.front().left_value() - rhs.intervals.front().left_value())> set_union;
+                set_union.intervals.reserve(std::max(intervals.size(), rhs.intervals.size()));
                 auto lhs_iter = intervals.cbegin();
                 auto rhs_iter = rhs.intervals.cbegin();
                 while (lhs_iter != intervals.cend() && rhs_iter != rhs.intervals.cend()) {
@@ -314,22 +358,22 @@ namespace libp {
                 return set_union;
             }
 
-            bool operator==(const IntervalUnion<RealType>& rhs) const {
+            bool operator==(const IntervalUnion<Boundary>& rhs) const {
                 // Change this to default when migrating to C++20.
                 return intervals == rhs.intervals;
             }
 
-            bool operator!=(const IntervalUnion<RealType>& rhs) const {
+            bool operator!=(const IntervalUnion<Boundary>& rhs) const {
                 // Change this to default when migrating to C++20.
                 return intervals != rhs.intervals;
             }
 
-            RealType operator()(const RealType& x) const {
+            Boundary operator()(const Boundary& x) const {
                 auto iter = std::lower_bound(
                     intervals.cbegin(),
                     intervals.cend(),
                     x,
-                    [](const Interval<RealType>& I, const RealType& y) {
+                    [](const Interval<Boundary>& I, const Boundary& y) {
                         return I.right_value() < y;
                     }
                 );
@@ -337,10 +381,10 @@ namespace libp {
             }
 
         private:
-            std::vector<Interval<RealType>> intervals;
+            std::vector<Interval<Boundary>> intervals;
 
-            static auto interval_intersection_right_remainder(const Interval<RealType>& I, const Interval<RealType>& J) {
-                auto interval_intersection = Interval<RealType>(
+            static auto interval_intersection_right_remainder(const Interval<Boundary>& I, const Interval<Boundary>& J) {
+                auto interval_intersection = Interval<Boundary>(
                     (
                         I.left_value() < J.left_value()  ? J.left_bracket() :
                         I.left_value() == J.left_value() ? std::min(I.left_bracket(), J.left_bracket()) :
@@ -358,7 +402,7 @@ namespace libp {
                     if (interval_intersection.isempty()) {
                         return I.right_value() <= J.left_value() ? J : I;
                     }
-                    return Interval<RealType>(
+                    return Interval<Boundary>(
                         interval_intersection.right_bracket() == ')' ? '[' : '(',
                         interval_intersection.right_value(),
                         std::max(I.right_value(), J.right_value()),
@@ -372,7 +416,8 @@ namespace libp {
                 return std::make_pair(interval_intersection, right_remainder);
             }
 
-            static bool canonicalise_interval_union(Interval<RealType>& I, const Interval<RealType>& J) {
+            template<BoundaryConcept BoundaryJ>
+            static bool canonicalise_interval_union(Interval<Boundary>& I, const Interval<BoundaryJ>& J) {
                 // If I and J are distinct, return true and leave I unchanged, otherwise return false and set I to IUJ.
 
                 if (
@@ -416,7 +461,7 @@ namespace libp {
                 std::sort(
                     intervals.begin(),
                     intervals.end(),
-                    [](const Interval<RealType>& I, const Interval<RealType>& J) {
+                    [](const Interval<Boundary>& I, const Interval<Boundary>& J) {
                         return (
                             I.left_value() < J.left_value() ||
                             I.left_value() == J.left_value() && I.left_bracket() == '[' && J.left_bracket() == '('
@@ -427,10 +472,24 @@ namespace libp {
             }
     };
 
-    template<std::floating_point RealType>
-    std::ostream& operator<<(std::ostream& os, const libp::IntervalUnion<RealType>& A) {
+    IntervalUnion() -> IntervalUnion<double>;
+
+    template<BoundaryConcept IntBoundary>
+    IntervalUnion(Interval<IntBoundary>) -> IntervalUnion<IntBoundary>;
+
+    template<BoundaryConcept S, BoundaryConcept T>
+    IntervalUnion(char, S s, T t, char) -> IntervalUnion<decltype(s-t)>;
+
+    template<std::forward_iterator Iter>
+    IntervalUnion(Iter, Iter) -> IntervalUnion<typename Iter::value_type::boundary_type>;
+
+    template<BoundaryConcept RhsBoundary>
+    IntervalUnion(const IntervalUnion<RhsBoundary>&) -> IntervalUnion<RhsBoundary>;
+
+    template<BoundaryConcept Boundary>
+    std::ostream& operator<<(std::ostream& os, const libp::IntervalUnion<Boundary>& A) {
         if (A.isempty()) {
-            os << libp::Interval<RealType>('(',0,0,')');
+            os << libp::Interval<Boundary>('(',0,0,')');
         } else {
             for (auto iter = A.cbegin(); iter != A.cend(); ++iter) {
                 os << *iter;
@@ -440,11 +499,11 @@ namespace libp {
         return os;
     }
 
-    template<std::floating_point RealType>
-    std::istream& operator>>(std::istream& is, libp::IntervalUnion<RealType>& A) {
-        std::vector<libp::Interval<RealType>> intervals;
+    template<BoundaryConcept Boundary>
+    std::istream& operator>>(std::istream& is, libp::IntervalUnion<Boundary>& A) {
+        std::vector<libp::Interval<Boundary>> intervals;
         bool isnan = false;
-        for (libp::Interval<RealType> I; is >> I; ) {
+        for (libp::Interval<Boundary> I; is >> I; ) {
             if (!isnan) {
                 if (I.isnan()) {
                     isnan = true;
@@ -456,7 +515,7 @@ namespace libp {
             }
         }
 
-        auto populate_A = [&]() { libp::IntervalUnion<RealType> B(intervals.cbegin(), intervals.cend()); std::swap(A,B); };
+        auto populate_A = [&]() { libp::IntervalUnion<Boundary> B(intervals.cbegin(), intervals.cend()); std::swap(A,B); };
 
         if (is.eof()) {
             populate_A();
