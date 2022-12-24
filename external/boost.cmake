@@ -29,6 +29,7 @@ set(to_ignore
     mpi
     nowide
     numeric
+    python
 )
 list(TRANSFORM to_ignore PREPEND "${boost_libs_dir}/")
 file(GLOB children ${boost_libs_dir}/*)

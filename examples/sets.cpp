@@ -6,8 +6,8 @@ using std::cout;
 using std::endl;
 
 int main(void) {
-    const auto cap = u8" \u2229 ";
-    const auto cup = u8" \u222A ";
+    const char * cap = reinterpret_cast<const char *>(u8" \u2229 ");
+    const char * cup = reinterpret_cast<const char *>(u8" \u222A ");
 
     std::vector<MeasurableSet> sets = {none(), natural_numbers(), integers(), real_numbers(), all()};
 

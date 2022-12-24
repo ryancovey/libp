@@ -16,7 +16,7 @@ endmacro()
 
 add_library(libp INTERFACE)
 target_include_directories(libp INTERFACE include)
-target_compile_features(libp INTERFACE cxx_std_14)
+target_compile_features(libp INTERFACE cxx_std_20)
 
 add_subdirectory(external)
 add_subdirectory(examples)

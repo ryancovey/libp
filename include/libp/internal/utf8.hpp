@@ -2,13 +2,13 @@
 #define LIBP_INTERNAL_UTF8_HPP_GUARD
 
 namespace libp { inline namespace internal { namespace utf8 {
-                                                                    // LaTeX:
-    static constexpr const char blackboard_N[] = u8"\u2115";        // \mathbb{N}
-    static constexpr const char blackboard_R[] = u8"\u211D";        // \mathbb{R}
-    static constexpr const char blackboard_Z[] = u8"\u2124";        // \mathbb{Z}
-    static constexpr const char blackboard_U[] = u8"\U0001D54C";    // \mathbb{U}
-    static constexpr const char emptyset[] =     u8"\u2205";        // \varnothing
-    static constexpr const char times[] =        u8"\u00D7";        // \times
+                                                                                          // LaTeX:
+    static const char * blackboard_N = reinterpret_cast<const char *>(u8"\u2115");        // \mathbb{N}
+    static const char * blackboard_R = reinterpret_cast<const char *>(u8"\u211D");        // \mathbb{R}
+    static const char * blackboard_Z = reinterpret_cast<const char *>(u8"\u2124");        // \mathbb{Z}
+    static const char * blackboard_U = reinterpret_cast<const char *>(u8"\U0001D54C");    // \mathbb{U}
+    static const char * emptyset =     reinterpret_cast<const char *>(u8"\u2205");        // \varnothing
+    static const char * times =        reinterpret_cast<const char *>(u8"\u00D7");        // \times
 
 }}}
 

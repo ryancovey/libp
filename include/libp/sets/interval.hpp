@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <concepts>
 #include <cstdint>
 #include <ostream>
 #include <iterator>
@@ -20,10 +21,10 @@
 
 namespace libp {
 
-    template<class RealType>
+    template<std::floating_point RealType>
     class IntervalUnion;
 
-    template<class RealType>
+    template<std::floating_point RealType>
     class Interval {
         friend class IntervalUnion<RealType>;
 
@@ -75,7 +76,7 @@ namespace libp {
                     (x == right_value() && right_bracket() == ']');
             }
 
-            template<class T>
+            template<std::floating_point T>
             bool operator==(const Interval<T>& rhs) const {
                 return left_bracket_m == rhs.left_bracket_m &&
                     left_value_m == rhs.left_value_m &&
@@ -83,7 +84,7 @@ namespace libp {
                     right_bracket_m == rhs.right_bracket_m;
             }
 
-            template<class T>
+            template<std::floating_point T>
             bool operator!=(const Interval<T>& rhs) const {
                 if (isnan() || rhs.isnan()) {
                     return false;
@@ -123,13 +124,13 @@ namespace libp {
             };
     };
 
-    template<class RealType>
+    template<std::floating_point RealType>
     std::ostream& operator<<(std::ostream& os, const libp::Interval<RealType>& I) {
         os << I.left_bracket() << I.left_value() << ',' << I.right_value() << I.right_bracket();
         return os;
     }
 
-    template<class RealType>
+    template<std::floating_point RealType>
     std::istream& operator>>(std::istream& is, libp::Interval<RealType>& I) {
         // Ideally, this should leave stream contents unchanged on failure,
         // which is currently not the case.
@@ -159,7 +160,7 @@ namespace libp {
         return is;
     }
 
-    template<class RealType>
+    template<std::floating_point RealType>
     class IntervalUnion {
         public:
             IntervalUnion() = default;
@@ -172,7 +173,7 @@ namespace libp {
                 IntervalUnion(Interval<RealType>(left_bracket_in, left_value_in, right_value_in, right_bracket_in))
             { }
 
-            template<class InputIt>
+            template<std::forward_iterator InputIt>
             IntervalUnion(InputIt first, InputIt last) {
                 intervals.reserve(std::distance(first, last));
                 for (auto iter = first; iter != last; ++iter) {
@@ -426,7 +427,7 @@ namespace libp {
             }
     };
 
-    template<class RealType>
+    template<std::floating_point RealType>
     std::ostream& operator<<(std::ostream& os, const libp::IntervalUnion<RealType>& A) {
         if (A.isempty()) {
             os << libp::Interval<RealType>('(',0,0,')');
@@ -439,7 +440,7 @@ namespace libp {
         return os;
     }
 
-    template<class RealType>
+    template<std::floating_point RealType>
     std::istream& operator>>(std::istream& is, libp::IntervalUnion<RealType>& A) {
         std::vector<libp::Interval<RealType>> intervals;
         bool isnan = false;
