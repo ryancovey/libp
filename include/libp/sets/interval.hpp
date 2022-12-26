@@ -2,6 +2,7 @@
 #define LIBP_SETS_INTERVAL_HPP_GUARD
 
 #include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <concepts>
 #include <cstdint>
@@ -26,6 +27,8 @@ namespace libp {
     concept BoundaryConcept = requires(Boundary x, Boundary y) {
         requires std::default_initializable<Boundary>;
         requires std::totally_ordered<Boundary>;
+        std::numeric_limits<Boundary>::infinity();
+        std::numeric_limits<Boundary>::quiet_NaN();
         std::min(x,y);
         std::max(x,y);
     };
@@ -35,6 +38,9 @@ namespace libp {
 
     template<BoundaryConcept Boundary>
     class Interval {
+        template<BoundaryConcept B>
+        friend class Interval;
+
         template<BoundaryConcept B>
         friend class IntervalUnion;
 
@@ -91,7 +97,8 @@ namespace libp {
 
             auto isnan(void) const { return std::isnan(left_value_m); }
 
-            auto operator()(const Boundary& x) const {
+            template<BoundaryConcept BoundaryX>
+            auto operator()(const BoundaryX& x) const {
                 return (left_value() < x && x < right_value()) ||
                     (x == left_value() && left_bracket() == '[') ||
                     (x == right_value() && right_bracket() == ']');
@@ -122,7 +129,7 @@ namespace libp {
                 Interval<Boundary> ret;
                 ret.set_to_nan();
                 return ret;
-            }
+            } 
 
         private:
             Boundary left_value_m;
@@ -148,7 +155,7 @@ namespace libp {
     Interval() -> Interval<double>;
 
     template<BoundaryConcept S, BoundaryConcept T>
-    Interval(char, S s, T t, char) -> Interval<decltype(s-t)>;
+    Interval(char, S, T, char) -> Interval<std::common_type_t<S,T>>;
 
     template<BoundaryConcept RhsBoundary>
     Interval(const Interval<RhsBoundary>& rhs) -> Interval<RhsBoundary>;
@@ -161,8 +168,81 @@ namespace libp {
 
     template<BoundaryConcept Boundary>
     std::istream& operator>>(std::istream& is, libp::Interval<Boundary>& I) {
-        // Ideally, this should leave stream contents unchanged on failure,
-        // which is currently not the case.
+        auto backtrack_istream_impl = [](std::istream& isn, const std::string& buffer) -> std::istream& {
+            isn.clear();
+            for (auto i = buffer.size(); i != 0; --i) {
+                if (!isn.putback(buffer[i-1])) { return isn; }
+            }
+            return isn;
+        };
+
+        auto backtrack_istream = [&backtrack_istream_impl](std::istream& isn, const std::ostringstream& buffer) -> std::istream& {
+            return backtrack_istream_impl(isn, buffer.str());
+        };
+
+        auto backtrackable_get_from = [](std::istream& isn, std::ostringstream& buffer, char& c) -> std::istream& {
+            if (isn >> c) { buffer << c; }
+            return isn;
+        };
+
+        auto match = [&backtrack_istream, &backtrackable_get_from](std::istream& isn, const std::string& str) -> std::istream& {
+            std::ostringstream buffer;
+            char stream_char;
+            for (decltype(str.size()) i = 0; i != str.size(); ++i) {
+                if (!backtrackable_get_from(isn, buffer, stream_char) || stream_char != str[i]) {
+                    backtrack_istream(isn, buffer);
+                    isn.setstate(std::ios_base::failbit);
+                    return isn;
+                }
+            }
+            return isn;
+        };
+
+        auto read_boundary = [&match](std::istream& isn, Boundary& b) -> std::istream& {
+            // A minus character will be extracted by isn >> b, which can turn -inf into inf.
+            // We capture the next character so that we can put it back later if it turns out
+            // to be a minus.
+            char maybe_minus;
+            if (!(isn >> maybe_minus)) {
+                return isn;
+            }
+            isn.putback(maybe_minus);
+
+            // Try finite boundary.
+            if (isn >> b) {
+                return isn;
+            }
+
+            // Try negatively infinite boundary.
+            isn.clear();
+            if (maybe_minus == '-') { isn.putback('-'); }
+            auto inf = std::numeric_limits<Boundary>::infinity();
+            if (std::ostringstream ss; (ss << -inf) && match(isn, ss.str())) {
+                b = -inf;
+                return isn;
+            }
+
+            // Try positively infinite boundary.
+            isn.clear();
+            if (std::ostringstream ss; (ss << inf) && match(isn, ss.str())) {
+                b = inf;
+                return isn;
+            }
+
+            // Try nan boundary.
+            isn.clear();
+            auto nan = std::numeric_limits<Boundary>::quiet_NaN();
+            if (std::ostringstream ss; (ss << nan) && match(isn, ss.str())) {
+                b = nan;
+                return isn;
+            }
+
+            // Reading failed.
+            isn.setstate(std::ios_base::failbit);
+            return isn;
+        };
+
+        std::ostringstream buffer;
 
         char left_bracket; if (!(is >> left_bracket)) { return is; }
         if (left_bracket != '(' && left_bracket != '[') {
@@ -170,18 +250,49 @@ namespace libp {
             is.setstate(std::ios_base::failbit);
             return is;
         }
+        buffer << left_bracket;
 
-        Boundary left_value; if (!(is >> left_value)) { return is; }
+        Boundary left_value;
+        if (!read_boundary(is, left_value)) {
+            backtrack_istream(is, buffer);
+            is.setstate(std::ios_base::failbit);
+            return is;
+        }
+        buffer << left_value;
 
         char comma;
-        if (!(is >> comma)) { return is; }
+        if (!(is >> comma)) {
+            backtrack_istream(is, buffer);
+            is.setstate(std::ios_base::failbit);
+            return is;
+        }
+        buffer << comma;
         if (comma != ',') {
+            backtrack_istream(is, buffer);
             is.setstate(std::ios_base::failbit);
             return is;
         }
 
-        Boundary right_value; if (!(is >> right_value)) { return is; }
-        char right_bracket; if (!(is >> right_bracket)) { return is; }
+        Boundary right_value;
+        if (!read_boundary(is, right_value)) {
+            backtrack_istream(is, buffer);
+            is.setstate(std::ios_base::failbit);
+            return is;
+        }
+        buffer << right_value;
+
+        char right_bracket;
+        if (!(is >> right_bracket)) {
+            backtrack_istream(is, buffer);
+            is.setstate(std::ios_base::failbit);
+            return is;
+        }
+        buffer << right_bracket;
+        if (right_bracket != ')' && right_bracket != ']') {
+            backtrack_istream(is, buffer);
+            is.setstate(std::ios_base::failbit);
+            return is;
+        }
 
         libp::Interval<Boundary> J(left_bracket, left_value, right_value, right_bracket);
         std::swap(I,J);
@@ -231,7 +342,7 @@ namespace libp {
 
             template<BoundaryConcept RhsBoundary>
             IntervalUnion(const IntervalUnion<RhsBoundary>& rhs):
-                IntervalUnion(rhs.begin(), rhs.end())
+                IntervalUnion(rhs.cbegin(), rhs.cend())
             { }
 
             auto cbegin(void) const { return intervals.cbegin(); }
@@ -243,7 +354,6 @@ namespace libp {
 
             static IntervalUnion<Boundary> empty(void) { return {}; }
             static IntervalUnion<Boundary> nan(void) { return Interval<Boundary>::nan(); }
-
 
             IntervalUnion<Boundary> inv(bool extended_real_line = false) const {
                 if (intervals.size() == 0) {
@@ -310,20 +420,27 @@ namespace libp {
 
             template<BoundaryConcept RhsBoundary>
             auto operator&&(const IntervalUnion<RhsBoundary>& rhs) const {
-                if (isnan() || rhs.isnan()) { return nan(); }
-                IntervalUnion<decltype(intervals.front().left_value() - rhs.intervals.front().left_value())> intersection;
+                using CommonBoundary = std::common_type_t<Boundary, RhsBoundary>;
+                using CommonInterval = Interval<CommonBoundary>;
+                using CommonIntervalUnion = IntervalUnion<CommonBoundary>;
+                if (isnan() || rhs.isnan()) { return CommonIntervalUnion::nan(); }
+                CommonIntervalUnion intersection;
                 if (intervals.size() != 0 && rhs.intervals.size() != 0) {
                     intersection.intervals.reserve(std::max(intervals.size(), rhs.intervals.size()));
                     auto lhs_iter = intervals.cbegin();
                     auto lhs_end = intervals.cend();
                     auto rhs_iter = rhs.intervals.cbegin();
                     auto rhs_end = rhs.intervals.cend();
-                    auto I = *lhs_iter;
-                    auto J = *rhs_iter;
+                    CommonInterval I = *lhs_iter;
+                    CommonInterval J = *rhs_iter;
                     while (true) {
                         std::tie(I,J) = interval_intersection_right_remainder(I,J);
                         if (!I.isempty()) { intersection.intervals.emplace_back(std::move(I)); }
-                        if (J.right_value() == rhs_iter->right_value() && J.right_bracket() == rhs_iter->right_bracket()) {
+                        if (J.isempty()) {
+                            if (++lhs_iter == lhs_end || ++rhs_iter == rhs_end) { break; }
+                            I = *lhs_iter;
+                            J = *rhs_iter;
+                        } else if (J.right_value() == rhs_iter->right_value() && J.right_bracket() == rhs_iter->right_bracket()) {
                             if (++lhs_iter == lhs_end) { break; }
                             I = *lhs_iter;
                         } else {
@@ -337,8 +454,9 @@ namespace libp {
 
             template<BoundaryConcept RhsBoundary>
             auto operator||(const IntervalUnion<RhsBoundary>& rhs) const {
-                if (isnan() || rhs.isnan()) { return nan(); }
-                IntervalUnion<decltype(intervals.front().left_value() - rhs.intervals.front().left_value())> set_union;
+                using CommonIntervalUnion = IntervalUnion<std::common_type_t<Boundary, RhsBoundary>>;
+                if (isnan() || rhs.isnan()) { return CommonIntervalUnion::nan(); }
+                CommonIntervalUnion set_union;
                 set_union.intervals.reserve(std::max(intervals.size(), rhs.intervals.size()));
                 auto lhs_iter = intervals.cbegin();
                 auto rhs_iter = rhs.intervals.cbegin();
@@ -358,22 +476,34 @@ namespace libp {
                 return set_union;
             }
 
-            bool operator==(const IntervalUnion<Boundary>& rhs) const {
-                // Change this to default when migrating to C++20.
-                return intervals == rhs.intervals;
+            template<BoundaryConcept RhsBoundary>
+            bool operator==(const IntervalUnion<RhsBoundary>& rhs) const {
+                if (isnan() || rhs.isnan() || intervals.size() != rhs.intervals.size()) {
+                    return false;
+                } else {
+                    for (decltype(intervals.size()) i = 0; i != intervals.size(); ++i) {
+                        if (intervals[i] != rhs.intervals[i]) return false;
+                    }
+                }
+                return true;
             }
 
-            bool operator!=(const IntervalUnion<Boundary>& rhs) const {
-                // Change this to default when migrating to C++20.
-                return intervals != rhs.intervals;
+            template<BoundaryConcept RhsBoundary>
+            bool operator!=(const IntervalUnion<RhsBoundary>& rhs) const {
+                if (isnan() || rhs.isnan()) {
+                    return false;
+                } else {
+                    return !operator==(rhs);
+                }
             }
 
-            Boundary operator()(const Boundary& x) const {
+            template<BoundaryConcept BoundaryX>
+            Boundary operator()(const BoundaryX& x) const {
                 auto iter = std::lower_bound(
                     intervals.cbegin(),
                     intervals.cend(),
                     x,
-                    [](const Interval<Boundary>& I, const Boundary& y) {
+                    [](const Interval<Boundary>& I, const BoundaryX& y) {
                         return I.right_value() < y;
                     }
                 );
@@ -383,8 +513,9 @@ namespace libp {
         private:
             std::vector<Interval<Boundary>> intervals;
 
-            static auto interval_intersection_right_remainder(const Interval<Boundary>& I, const Interval<Boundary>& J) {
-                auto interval_intersection = Interval<Boundary>(
+            template<BoundaryConcept B>
+            static auto interval_intersection_right_remainder(const Interval<B>& I, const Interval<B>& J) {
+                auto interval_intersection = Interval<B>(
                     (
                         I.left_value() < J.left_value()  ? J.left_bracket() :
                         I.left_value() == J.left_value() ? std::min(I.left_bracket(), J.left_bracket()) :
@@ -398,11 +529,12 @@ namespace libp {
                                                              J.right_bracket()
                     )
                 );
+
                 auto right_remainder = [&]() {
                     if (interval_intersection.isempty()) {
                         return I.right_value() <= J.left_value() ? J : I;
                     }
-                    return Interval<Boundary>(
+                    return Interval<B>(
                         interval_intersection.right_bracket() == ')' ? '[' : '(',
                         interval_intersection.right_value(),
                         std::max(I.right_value(), J.right_value()),
@@ -416,8 +548,8 @@ namespace libp {
                 return std::make_pair(interval_intersection, right_remainder);
             }
 
-            template<BoundaryConcept BoundaryJ>
-            static bool canonicalise_interval_union(Interval<Boundary>& I, const Interval<BoundaryJ>& J) {
+            template<BoundaryConcept BoundaryI, BoundaryConcept BoundaryJ>
+            static bool canonicalise_interval_union(Interval<BoundaryI>& I, const Interval<BoundaryJ>& J) {
                 // If I and J are distinct, return true and leave I unchanged, otherwise return false and set I to IUJ.
 
                 if (
@@ -478,7 +610,7 @@ namespace libp {
     IntervalUnion(Interval<IntBoundary>) -> IntervalUnion<IntBoundary>;
 
     template<BoundaryConcept S, BoundaryConcept T>
-    IntervalUnion(char, S s, T t, char) -> IntervalUnion<decltype(s-t)>;
+    IntervalUnion(char, S, T, char) -> IntervalUnion<std::common_type_t<S,T>>;
 
     template<std::forward_iterator Iter>
     IntervalUnion(Iter, Iter) -> IntervalUnion<typename Iter::value_type::boundary_type>;
