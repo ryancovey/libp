@@ -14,8 +14,6 @@
 #include <boost/test/unit_test.hpp>
 #include <libp/sets/interval.hpp>
 
-// #include <iostream>
-
 BOOST_AUTO_TEST_CASE(simple_interval_test) {
     BOOST_TEST(libp::Interval('(',1.0,-1.0,')') == libp::Interval('(',0.0,0.0,')'));
     
@@ -31,6 +29,26 @@ BOOST_AUTO_TEST_CASE(simple_interval_test) {
     std::stringstream ss1; ss1 << C;
     libp::IntervalUnion<double> D; ss1 >> D;
     BOOST_TEST(C == D);
+}
+
+template<libp::BoundaryConcept B>
+bool complex_interval_test_impl(int n);
+
+template<libp::BoundaryConcept BA, libp::BoundaryConcept BB>
+bool complex_interval_test_impl(int n);
+
+template<libp::BoundaryConcept BA, libp::BoundaryConcept BB, libp::BoundaryConcept BC>
+bool complex_interval_test_impl(int n);
+
+template<libp::BoundaryConcept BA, libp::BoundaryConcept BB, libp::BoundaryConcept BC, libp::BoundaryConcept... Tail>
+bool complex_interval_test_impl(int n);
+
+BOOST_AUTO_TEST_CASE(complex_interval_test) {
+    constexpr auto n = 100; // The number of randomly generated set triplets to test for each possible set type triple
+                            // given the list in the template below. The triplets being, for example, (float, float, float),
+                            // (float, float, double), (float, double, float), etc. It might be worth increasing this
+                            // value when testing new functionality.
+    complex_interval_test_impl<float, double>(100);
 }
 
 template<libp::BoundaryConcept BoundaryA, libp::BoundaryConcept BoundaryB, libp::BoundaryConcept BoundaryC>
@@ -174,8 +192,8 @@ struct SetPairDist {
 };
 
 template<libp::BoundaryConcept BoundaryA, libp::BoundaryConcept BoundaryB, libp::BoundaryConcept BoundaryC>
-auto complex_interval_test_impl_fixed_boundary_types(void) {
-    auto n = 100; // Random test cases sample size.
+bool complex_interval_test_impl_fixed_boundary_types(int n) {
+    // The input n is the number of randomly generated set triplets.
 
     auto test_set = [&](const auto& A) {
         constexpr auto inf = std::numeric_limits<typename std::decay_t<decltype(A)>::boundary_type>::infinity();
@@ -413,9 +431,9 @@ auto complex_interval_test_impl_fixed_boundary_types(void) {
     }
 
     if (pass) {
-        SetPairDist<BoundaryA, BoundaryB, BoundaryC> set_pair_dist;
+        SetPairDist<BoundaryA, BoundaryB, BoundaryC> set_triplet_dist;
         while (n-- && pass) {
-            auto [A,B,C] = set_pair_dist();
+            auto [A,B,C] = set_triplet_dist();
             pass = test_sets_pair_triple(A,B,C);
             if (!pass) {
                 std::ofstream test_cases{test_cases_path, std::ios_base::out | std::ios_base::app};
@@ -432,40 +450,42 @@ auto complex_interval_test_impl_fixed_boundary_types(void) {
 }
 
 template<libp::BoundaryConcept B>
-auto complex_interval_test_impl(void) {
-    return complex_interval_test_impl_fixed_boundary_types<B, B, B>();
+bool complex_interval_test_impl(int n) {
+    return complex_interval_test_impl_fixed_boundary_types<B, B, B>(n);
 }
 
 template<libp::BoundaryConcept BA, libp::BoundaryConcept BB>
-auto complex_interval_test_impl(void) {
+bool complex_interval_test_impl(int n) {
     bool pass = true;
-    pass = pass && complex_interval_test_impl_fixed_boundary_types<BA, BA, BA>();
-    pass = pass && complex_interval_test_impl_fixed_boundary_types<BA, BA, BB>();
-    pass = pass && complex_interval_test_impl_fixed_boundary_types<BA, BB, BB>();
-    pass = pass && complex_interval_test_impl_fixed_boundary_types<BB, BB, BB>();
+    pass = pass && complex_interval_test_impl_fixed_boundary_types<BA, BA, BA>(n);
+    pass = pass && complex_interval_test_impl_fixed_boundary_types<BA, BA, BB>(n);
+    pass = pass && complex_interval_test_impl_fixed_boundary_types<BA, BB, BB>(n);
+    pass = pass && complex_interval_test_impl_fixed_boundary_types<BB, BB, BB>(n);
+    return pass;
+}
+
+template<libp::BoundaryConcept BA, libp::BoundaryConcept BB, libp::BoundaryConcept BC>
+bool complex_interval_test_impl(int n) {
+    bool pass = true;
+    pass = pass && complex_interval_test_impl_fixed_boundary_types<BA, BA, BA>(n);
+    pass = pass && complex_interval_test_impl_fixed_boundary_types<BA, BA, BB>(n);
+    pass = pass && complex_interval_test_impl_fixed_boundary_types<BA, BA, BC>(n);
+    pass = pass && complex_interval_test_impl_fixed_boundary_types<BA, BB, BB>(n);
+    pass = pass && complex_interval_test_impl_fixed_boundary_types<BA, BB, BC>(n);
+    pass = pass && complex_interval_test_impl_fixed_boundary_types<BA, BC, BC>(n);
+    pass = pass && complex_interval_test_impl_fixed_boundary_types<BB, BB, BB>(n);
+    pass = pass && complex_interval_test_impl_fixed_boundary_types<BB, BB, BC>(n);
+    pass = pass && complex_interval_test_impl_fixed_boundary_types<BB, BC, BC>(n);
+    pass = pass && complex_interval_test_impl_fixed_boundary_types<BC, BC, BC>(n);
     return pass;
 }
 
 template<libp::BoundaryConcept BA, libp::BoundaryConcept BB, libp::BoundaryConcept BC, libp::BoundaryConcept... Tail>
-auto complex_interval_test_impl(void) {
+bool complex_interval_test_impl(int n) {
     bool pass = true;
-
-    pass = pass && complex_interval_test_impl_fixed_boundary_types<BA, BA, BA>();
-    pass = pass && complex_interval_test_impl_fixed_boundary_types<BA, BA, BB>();
-    pass = pass && complex_interval_test_impl_fixed_boundary_types<BA, BA, BC>();
-    pass = pass && complex_interval_test_impl_fixed_boundary_types<BA, BB, BB>();
-    pass = pass && complex_interval_test_impl_fixed_boundary_types<BA, BB, BC>();
-    pass = pass && complex_interval_test_impl_fixed_boundary_types<BA, BC, BC>();
-    pass = pass && complex_interval_test_impl_fixed_boundary_types<BB, BB, BB>();
-    pass = pass && complex_interval_test_impl_fixed_boundary_types<BB, BB, BC>();
-    pass = pass && complex_interval_test_impl_fixed_boundary_types<BB, BC, BC>();
-    pass = pass && complex_interval_test_impl_fixed_boundary_types<BC, BC, BC>();
-    
-    pass = pass && complex_interval_test_impl<BA, BB, Tail...>();
-    pass = pass && complex_interval_test_impl<BA, BC, Tail...>();
-    pass = pass && complex_interval_test_impl<BB, BC, Tail...>();
-}
-
-BOOST_AUTO_TEST_CASE(complex_interval_test) {
-    complex_interval_test_impl<float, double>();
+    pass = pass && complex_interval_test_impl<BA, BB, BC>(n);
+    pass = pass && complex_interval_test_impl<BA, BB, Tail...>(n);
+    pass = pass && complex_interval_test_impl<BA, BC, Tail...>(n);
+    pass = pass && complex_interval_test_impl<BB, BC, Tail...>(n);
+    return pass;
 }
