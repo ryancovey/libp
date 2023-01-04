@@ -15,11 +15,6 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
-#include <libp/internal/constants.hpp>
-#include <libp/internal/max.hpp>
-#include <libp/internal/where.hpp>
-// #include <libp/measures/counting.hpp>
-// #include <libp/sets/measurable_set.hpp>
 
 namespace libp {
 
