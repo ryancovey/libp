@@ -21,3 +21,11 @@ create_and_copy(
   recursive = TRUE
 )
 
+stan.math.cache.path <- cache.dependency(
+  url = "https://github.com/stan-dev/math/archive/refs/heads/release/v4.5.0.zip"
+)
+create_and_copy(
+  from = dir(stan.math.cache.path, full.names = TRUE),
+  to = file.path(deps.dir, "stan_math"),
+  recursive = TRUE
+)
