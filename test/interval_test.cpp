@@ -1,3 +1,5 @@
+#define BOOST_TEST_DYN_LINK
+
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -48,7 +50,7 @@ BOOST_AUTO_TEST_CASE(complex_interval_test) {
                             // given the list in the template below. The triplets being, for example, (float, float, float),
                             // (float, float, double), (float, double, float), etc. It might be worth increasing this
                             // value when testing new functionality.
-    complex_interval_test_impl<float, double>(100);
+    complex_interval_test_impl<float, double>(n);
 }
 
 template<libp::BoundaryConcept BoundaryA, libp::BoundaryConcept BoundaryB, libp::BoundaryConcept BoundaryC>

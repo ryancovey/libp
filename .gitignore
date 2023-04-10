@@ -2,10 +2,4 @@
 !.gitignore
 !.vscode
 
-build/*
-!build/test/
-build/test/*
-!build/test/interval_test_cases.txt
-
-cache/
-
+*.o
