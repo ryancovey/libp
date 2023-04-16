@@ -14,6 +14,7 @@
 #include <tuple>
 #include <vector>
 #include <boost/test/unit_test.hpp>
+#include <stan/math.hpp>
 #include <libp/sets/interval.hpp>
 
 BOOST_AUTO_TEST_CASE(simple_interval_test) {
@@ -42,7 +43,7 @@ bool complex_interval_test_impl(int n);
 template<libp::BoundaryConcept BA, libp::BoundaryConcept BB, libp::BoundaryConcept BC>
 bool complex_interval_test_impl(int n);
 
-template<libp::BoundaryConcept BA, libp::BoundaryConcept BB, libp::BoundaryConcept BC, libp::BoundaryConcept... Tail>
+template<libp::BoundaryConcept BA, libp::BoundaryConcept BB, libp::BoundaryConcept BC, libp::BoundaryConcept BD, libp::BoundaryConcept... Tail>
 bool complex_interval_test_impl(int n);
 
 BOOST_AUTO_TEST_CASE(complex_interval_test) {
@@ -50,7 +51,22 @@ BOOST_AUTO_TEST_CASE(complex_interval_test) {
                             // given the list in the template below. The triplets being, for example, (float, float, float),
                             // (float, float, double), (float, double, float), etc. It might be worth increasing this
                             // value when testing new functionality.
-    complex_interval_test_impl<float, double>(n);
+    complex_interval_test_impl<float, double, stan::math::var>(n);
+}
+
+// The stan math library does not define an implicit conversion from stan:math:var to double, so we define
+// out own assignment function to do the conversion.
+template<class L, class R>
+L& assign(L& lhs, R& rhs) {
+    return lhs = rhs;
+}
+libp::IntervalUnion<double>& assign(libp::IntervalUnion<double>& lhs, libp::IntervalUnion<stan::math::var>& rhs) {
+    std::vector<libp::Interval<double>> new_lhs_intervals;
+    for (auto iter = rhs.cbegin(); iter != rhs.cend(); ++iter) {
+        auto I = *iter;
+        new_lhs_intervals.emplace_back(I.left_bracket(), I.left_value().val(), I.right_value().val(), I.right_bracket());
+    }
+    return lhs = libp::IntervalUnion<double>(new_lhs_intervals.begin(), new_lhs_intervals.end());
 }
 
 template<libp::BoundaryConcept BoundaryA, libp::BoundaryConcept BoundaryB, libp::BoundaryConcept BoundaryC>
@@ -89,15 +105,15 @@ struct SetPairDist {
     template<std::floating_point T>
     auto isfinite(T t) { return std::isfinite(t); }
 
-    template<libp::BoundaryConcept BoundaryThird, libp::BoundaryConcept BoundarySecond, libp::BoundaryConcept BoundaryFirst>
     auto draw_third_boundaries(
         std::vector<uint64_t>& third_boundaries,
         const std::vector<uint64_t>& second_boundaries,
         const std::vector<uint64_t>& first_boundaries
     ) {
-        static constexpr auto neg_inf = -std::numeric_limits<BoundaryThird>::infinity();
-        static constexpr auto pos_inf = std::numeric_limits<BoundaryThird>::infinity();
-        static constexpr auto nan = std::numeric_limits<BoundaryThird>::quiet_NaN();
+        static constexpr auto neg_inf = -std::numeric_limits<double>::infinity();
+        static constexpr auto pos_inf = std::numeric_limits<double>::infinity();
+        static constexpr auto nan = std::numeric_limits<double>::quiet_NaN();
+
         third_boundaries.clear();
         auto interval_count = interval_count_dist(eng);
         auto boundary_count = std::max(2*interval_count, 2*(interval_count/2));
@@ -106,19 +122,19 @@ struct SetPairDist {
             uint64_t boundary_third_uint64 = 0;
             switch (boundary_finiteness_dist(eng)) {
                 case finite_boundary:
-                    BoundaryThird boundary_third;
+                    double boundary_third;
                     do {
                         boundary_third_uint64 = finite_boundaries_dist(eng);
-                        std::memcpy(&boundary_third, &boundary_third_uint64, sizeof(BoundaryThird));
+                        std::memcpy(&boundary_third, &boundary_third_uint64, sizeof(double));
                     } while (!isfinite(boundary_third));
                     third_boundaries.push_back(boundary_third_uint64);
                     break;
                 case inf_boundary:
-                    std::memcpy(&boundary_third_uint64, pos_inf_dist(eng) ? &pos_inf : &neg_inf, sizeof(BoundaryThird));
+                    std::memcpy(&boundary_third_uint64, pos_inf_dist(eng) ? &pos_inf : &neg_inf, sizeof(double));
                     third_boundaries.push_back(boundary_third_uint64);
                     break;
                 case nan_boundary:
-                    std::memcpy(&boundary_third_uint64, &nan, sizeof(BoundaryThird));
+                    std::memcpy(&boundary_third_uint64, &nan, sizeof(double));
                     third_boundaries.push_back(boundary_third_uint64);
                     break;
                 case repeat_boundary:
@@ -127,10 +143,10 @@ struct SetPairDist {
                         if (first_boundaries.empty()) {
                             to_repeat = 2;
                         } else {
-                            BoundaryFirst boundary_first;
-                            std::memcpy(&boundary_first, &first_boundaries.at(finite_boundaries_dist(eng) % first_boundaries.size()), sizeof(BoundaryFirst));
+                            double boundary_first;
+                            std::memcpy(&boundary_first, &first_boundaries.at(finite_boundaries_dist(eng) % first_boundaries.size()), sizeof(double));
                             boundary_third = boundary_first;
-                            std::memcpy(&boundary_third_uint64, &boundary_third, sizeof(BoundaryThird));
+                            std::memcpy(&boundary_third_uint64, &boundary_third, sizeof(double));
                             third_boundaries.push_back(boundary_third_uint64);
                         }
                     }
@@ -138,10 +154,10 @@ struct SetPairDist {
                         if (second_boundaries.empty()) {
                             to_repeat = 3;
                         } else {
-                            BoundarySecond boundary_second;
-                            std::memcpy(&boundary_second, &second_boundaries.at(finite_boundaries_dist(eng) % second_boundaries.size()), sizeof(BoundarySecond));
+                            double boundary_second;
+                            std::memcpy(&boundary_second, &second_boundaries.at(finite_boundaries_dist(eng) % second_boundaries.size()), sizeof(double));
                             boundary_third = boundary_second;
-                            std::memcpy(&boundary_third_uint64, &boundary_third, sizeof(BoundaryThird));
+                            std::memcpy(&boundary_third_uint64, &boundary_third, sizeof(double));
                             third_boundaries.push_back(boundary_third_uint64);
                         }
                     }
@@ -160,12 +176,18 @@ struct SetPairDist {
 
     template<libp::BoundaryConcept B>
     auto draw_set_from_boundaries(std::vector<uint64_t>& boundaries_uint64) {
+        auto get_boundary = [&boundaries_uint64](auto i) {
+            double boundary;
+            std::memcpy(&boundary, &boundaries_uint64.at(i), sizeof(double));
+            return static_cast<B>(boundary);
+        };
+
         std::sort(boundaries_uint64.begin(), boundaries_uint64.end());
         
         std::vector<libp::Interval<B>> intervals; intervals.reserve(boundaries_uint64.size()/2);
         for (decltype(boundaries_uint64.size()) i = 0; i+1 < boundaries_uint64.size(); i += 2) {
-            B left_value; std::memcpy(&left_value, &boundaries_uint64.at(i), sizeof(B));
-            B right_value; std::memcpy(&right_value, &boundaries_uint64.at(i+1), sizeof(B));
+            auto left_value = get_boundary(i);
+            auto right_value = get_boundary(i+1);
             intervals.emplace_back(
                 closed_bracket_dist(eng) ? '[' : '(',
                 left_value,
@@ -180,13 +202,13 @@ struct SetPairDist {
     auto operator()(void) {
         std::vector<uint64_t> boundaries_A, boundaries_B, boundaries_C;
 
-        draw_third_boundaries<BoundaryA, BoundaryC, BoundaryB>(boundaries_A, boundaries_C, boundaries_B);
+        draw_third_boundaries(boundaries_A, boundaries_C, boundaries_B);
         auto A = draw_set_from_boundaries<BoundaryA>(boundaries_A);
 
-        draw_third_boundaries<BoundaryB, BoundaryA, BoundaryC>(boundaries_B, boundaries_A, boundaries_C);
+        draw_third_boundaries(boundaries_B, boundaries_A, boundaries_C);
         auto B = draw_set_from_boundaries<BoundaryB>(boundaries_B);
 
-        draw_third_boundaries<BoundaryC, BoundaryB, BoundaryA>(boundaries_C, boundaries_B, boundaries_A);
+        draw_third_boundaries(boundaries_C, boundaries_B, boundaries_A);
         auto C = draw_set_from_boundaries<BoundaryC>(boundaries_C);
 
         return std::tuple{A,B,C};
@@ -198,7 +220,7 @@ bool complex_interval_test_impl_fixed_boundary_types(int n) {
     // The input n is the number of randomly generated set triplets.
 
     auto test_set = [&](const auto& A) {
-        constexpr auto inf = std::numeric_limits<typename std::decay_t<decltype(A)>::boundary_type>::infinity();
+        const auto inf = std::numeric_limits<typename std::decay_t<decltype(A)>::boundary_type>::infinity();
 
         auto O = libp::IntervalUnion<typename std::decay_t<decltype(A)>::boundary_type>::empty();
         auto C = A.inv(true);
@@ -301,8 +323,8 @@ bool complex_interval_test_impl_fixed_boundary_types(int n) {
     };
 
     auto test_set_pair = [&](const auto& A, const auto& B) {
-        constexpr auto infA = std::numeric_limits<typename std::decay_t<decltype(A)>::boundary_type>::infinity();
-        constexpr auto infB = std::numeric_limits<typename std::decay_t<decltype(B)>::boundary_type>::infinity();
+        const auto infA = std::numeric_limits<typename std::decay_t<decltype(A)>::boundary_type>::infinity();
+        const auto infB = std::numeric_limits<typename std::decay_t<decltype(B)>::boundary_type>::infinity();
         auto AorB = A || B;
         auto AandB = A && B;
         bool pass;
@@ -440,9 +462,9 @@ bool complex_interval_test_impl_fixed_boundary_types(int n) {
             if (!pass) {
                 std::ofstream test_cases{test_cases_path, std::ios_base::out | std::ios_base::app};
                 test_cases.precision(std::numeric_limits<double>::max_digits10);
-                D = A; test_cases << D;
-                D = B; test_cases << D;
-                D = C; test_cases << D;
+                assign(D, A); test_cases << D;
+                assign(D, B); test_cases << D;
+                assign(D, C); test_cases << D;
                 test_cases << std::endl;
             }
         }
@@ -482,12 +504,12 @@ bool complex_interval_test_impl(int n) {
     return pass;
 }
 
-template<libp::BoundaryConcept BA, libp::BoundaryConcept BB, libp::BoundaryConcept BC, libp::BoundaryConcept... Tail>
+template<libp::BoundaryConcept BA, libp::BoundaryConcept BB, libp::BoundaryConcept BC, libp::BoundaryConcept BD, libp::BoundaryConcept... Tail>
 bool complex_interval_test_impl(int n) {
     bool pass = true;
     pass = pass && complex_interval_test_impl<BA, BB, BC>(n);
-    pass = pass && complex_interval_test_impl<BA, BB, Tail...>(n);
-    pass = pass && complex_interval_test_impl<BA, BC, Tail...>(n);
-    pass = pass && complex_interval_test_impl<BB, BC, Tail...>(n);
+    pass = pass && complex_interval_test_impl<BA, BB, BD, Tail...>(n);
+    pass = pass && complex_interval_test_impl<BA, BC, BD, Tail...>(n);
+    pass = pass && complex_interval_test_impl<BB, BC, BD, Tail...>(n);
     return pass;
 }

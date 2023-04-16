@@ -1,10 +1,9 @@
 default : test
 
--include $(MATH)make/standalone
+-include $(LIBP)/libp.make
+-include $(EXTERNAL)/math.make
 
 LIBPTESTOBJECTS = test.o interval_test.o
-
-CXXFLAGS += -I $(LIBP)/include
 
 ifndef STAN_MPI
 	BOOST_LIBRARY_ABSOLUTE_PATH = $(abspath $(BOOST)/stage/lib)

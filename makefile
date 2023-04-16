@@ -3,6 +3,8 @@ export LIBP_CXX_LANG ?= 20
 export CXXFLAGS_LANG ?= -std=c++$(LIBP_CXX_LANG)
 export CPPFLAGS_LANG ?= $(CXXFLAGS_LANG)
 
+export EXTERNAL = $(CURDIR)/external
+
 # The MATH variable is documented by external/math/make/standalone.
 export MATH = $(CURDIR)/external/math/
 
