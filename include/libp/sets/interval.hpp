@@ -120,6 +120,10 @@ namespace libp {
                 return {};
             }
 
+            static Interval<Boundary> universal(void) {
+                return !Interval<Boundary>();
+            }
+
             static Interval<Boundary> nan(void) {
                 Interval<Boundary> ret;
                 ret.set_to_nan();
@@ -348,6 +352,7 @@ namespace libp {
             bool isnan(void) const { return !isempty() && intervals.front().isnan(); }
 
             static IntervalUnion<Boundary> empty(void) { return {}; }
+            static IntervalUnion<Boundary> universal(void) { return !IntervalUnion<Boundary>(); }
             static IntervalUnion<Boundary> nan(void) { return Interval<Boundary>::nan(); }
 
             IntervalUnion<Boundary> inv(bool extended_real_line = false) const {
