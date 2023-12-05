@@ -138,7 +138,7 @@ namespace libp {
             }
 
             bool is_empty_cylinder(const CylinderSet<Domain, Codomain>& cylinder) {
-                cylinder.domain_subset.empty() || ()
+                cylinder.domain_subset.empty() || () // Unfinished.
             }
 
             CylinderSet<Domain, Codomain> universal_cylinder(void) const {
