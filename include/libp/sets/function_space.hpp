@@ -85,7 +85,7 @@ namespace libp {
                         CylinderSet(Domain::empty(), codomain, 1, 1),
                         CylinderSet(domain, codomain, 1, 1)
                     }
-                }
+                };
             }
 
             static FunctionSpace<Domain, Codomain> for_all(
@@ -102,7 +102,7 @@ namespace libp {
                         CylinderSet(Domain::empty(), codomain, 1, 1),
                         CylinderSet(x_in_here, fx_in_here, 1, 0)
                     }
-                }
+                };
             }
 
             static FunctionSpace<Domain, Codomain> there_exists(
@@ -117,9 +117,9 @@ namespace libp {
                     {
                         CylinderSet(domain, Codomain::empty(), 0, 0),
                         CylinderSet(Domain::empty(), codomain, 1, 1),
-                        CylinderSet(x_in_here, !fx_in_here, 0, 1)
+                        CylinderSet(x_in_here, x_in_here.issingleton() ? , 0, 1)
                     }
-                }
+                };
             }
 
         private:
@@ -133,10 +133,22 @@ namespace libp {
                 tree(std::move(tree_in))
             { }
 
-            const Domain domain;
-            const Codomain codomain;
+            CylinderSet<Domain, Codomain> empty_cylinder(void) const {
+                return {domain, Codomain::empty(), 0, 0};
+            }
+
+            bool is_empty_cylinder(const CylinderSet<Domain, Codomain>& cylinder) {
+                cylinder.domain_subset.empty() || ()
+            }
+
+            CylinderSet<Domain, Codomain> universal_cylinder(void) const {
+                return {Domain::empty(), codomain, 1, 1};
+            }
+
+            Domain domain;
+            Codomain codomain;
             std::vector<CylinderSet<Domain, Codomain>> tree;
-            std::vector<std::size_t> ancestors;
+            std::vector<std::size_t> ancestors; // only needed when unioning or intersecting, move inside relevant function?
             std::vector<Domain> disjoint_domain_subsets;
 
     }

@@ -90,6 +90,10 @@ namespace libp {
                 return ((left_value_m == right_value_m && !closed()) || left_value_m > right_value_m);
             }
 
+            auto issingleton(void) const {
+                return left_value_m == right_value_m && closed();
+            }
+
             auto isnan(void) const { return std::isnan(left_value_m); }
 
             template<BoundaryConcept BoundaryX>
@@ -348,6 +352,8 @@ namespace libp {
             auto cend(void) const { return intervals.cend(); }
 
             bool isempty(void) const { return intervals.empty(); }
+
+            bool issingleton(void) const { return intervals.size() == 1 && intervals[1].issingleton(); }
 
             bool isnan(void) const { return !isempty() && intervals.front().isnan(); }
 
@@ -621,6 +627,12 @@ namespace libp {
 
     template<BoundaryConcept RhsBoundary>
     IntervalUnion(const IntervalUnion<RhsBoundary>&) -> IntervalUnion<RhsBoundary>;
+
+    template<BoundaryConcept LhsBoundary, BoundaryConcept RhsBoundary>
+    auto operator-(const IntervalUnion<LhsBoundary>& lhs, const IntervalUnion<RhsBoundary>& rhs) {
+        constexpr auto inf = std::numeric_limits<LhsBoundary>::infinity();
+        return lhs && rhs.inv(lhs(inf) || lhs(-inf));
+    }
 
     template<BoundaryConcept Boundary>
     std::ostream& operator<<(std::ostream& os, const libp::IntervalUnion<Boundary>& A) {
