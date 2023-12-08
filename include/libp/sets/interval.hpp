@@ -634,6 +634,26 @@ namespace libp {
         return lhs && rhs.inv(lhs(inf) || lhs(-inf));
     }
 
+    template<BoundaryConcept LhsBoundary, BoundaryConcept RhsBoundary>
+    auto operator<=(const IntervalUnion<LhsBoundary>& lhs, const IntervalUnion<RhsBoundary>& rhs) {
+        return (lhs - rhs).isempty();
+    }
+
+    template<BoundaryConcept LhsBoundary, BoundaryConcept RhsBoundary>
+    auto operator>=(const IntervalUnion<LhsBoundary>& lhs, const IntervalUnion<RhsBoundary>& rhs) {
+        return rhs <= lhs;
+    }
+
+    template<BoundaryConcept LhsBoundary, BoundaryConcept RhsBoundary>
+    auto operator<(const IntervalUnion<LhsBoundary>& lhs, const IntervalUnion<RhsBoundary>& rhs) {
+        return (lhs <= rhs) && !(lhs >= rhs);
+    }
+
+    template<BoundaryConcept LhsBoundary, BoundaryConcept RhsBoundary>
+    auto operator>(const IntervalUnion<LhsBoundary>& lhs, const IntervalUnion<RhsBoundary>& rhs) {
+        return rhs < lhs;
+    }
+
     template<BoundaryConcept Boundary>
     std::ostream& operator<<(std::ostream& os, const libp::IntervalUnion<Boundary>& A) {
         if (A.isempty()) {
