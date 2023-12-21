@@ -58,11 +58,7 @@ namespace libp {
             FunctionSpace(Domain domain_in = Domain::universal(), Codomain codomain_in = Codomain::universal()):
                 domain(std::move(domain_in)),
                 codomain(std::move(codomain_in)),
-                tree{
-                    CylinderSet(domain, Codomain::empty(), 0, 0),
-                    CylinderSet(Domain::empty(), codomain, 1, 1),
-                    CylinderSet(domain, Codomain::empty(), 0, 0)
-                },
+                tree(empty_tree()),
                 disjoint_domain_subsets{domain}
             { }
 
@@ -80,11 +76,7 @@ namespace libp {
                 return {
                     domain,
                     codomain,
-                    {
-                        CylinderSet(domain, Codomain::empty(), 0, 0),
-                        CylinderSet(Domain::empty(), codomain, 1, 1),
-                        CylinderSet(domain, codomain, 1, 1)
-                    }
+                    universal_tree(domain, codomain)
                 };
             }
 
@@ -98,8 +90,8 @@ namespace libp {
                     domain,
                     codomain,
                     {
-                        CylinderSet(domain, Codomain::empty(), 0, 0),
-                        CylinderSet(Domain::empty(), codomain, 1, 1),
+                        empty_cylinder(),
+                        universal_cylinder(),
                         CylinderSet(x_in_here, fx_in_here, 1, 0)
                     }
                 };
@@ -123,6 +115,12 @@ namespace libp {
             }
 
         private:
+            Domain domain;
+            Codomain codomain;
+            std::vector<CylinderSet<Domain, Codomain>> tree;
+            std::vector<std::size_t> ancestors; // only needed when unioning or intersecting, move inside relevant function?
+            std::vector<Domain> disjoint_domain_subsets;
+
             FunctionSpace(
                 Domain domain_in,
                 Codomain codomain_in,
@@ -133,24 +131,60 @@ namespace libp {
                 tree(std::move(tree_in))
             { }
 
+            static CylinderSet<Domain, Codomain> empty_cylinder(Domain domain, const Codomain& codomain) {
+                return {std::move(domain), Codomain::empty(), 0, 0};
+            }
+
             CylinderSet<Domain, Codomain> empty_cylinder(void) const {
-                return {domain, Codomain::empty(), 0, 0};
+                return empty_cylinder(domain, codomain);
             }
 
             bool is_empty_cylinder(const CylinderSet<Domain, Codomain>& cylinder) {
-                cylinder.domain_subset.empty() || () // Unfinished.
+                !isdisjoint(cylinder.domain_subset, domain) && isdisjoint(cylinder.codomain_subset, codomain);
             }
 
-            CylinderSet<Domain, Codomain> universal_cylinder(void) const {
+            static CylinderSet<Domain, Codomain> universal_cylinder(const Domain& domain, Codomain codomain) {
                 return {Domain::empty(), codomain, 1, 1};
             }
 
-            Domain domain;
-            Codomain codomain;
-            std::vector<CylinderSet<Domain, Codomain>> tree;
-            std::vector<std::size_t> ancestors; // only needed when unioning or intersecting, move inside relevant function?
-            std::vector<Domain> disjoint_domain_subsets;
+            CylinderSet<Domain, Codomain> universal_cylinder(void) const {
+                return universal_cylinder(domain, codomain);
+            }
 
+            bool is_universal_cylinder(const CylinderSet<Domain, Codomain>& cylinder) const {
+                isdisjoint(cylinder.domain_subset, domain) && cylinder.codomain_subset >= codomain;
+            }
+
+            static std::vector<CylinderSet<Domain, Codomain>> empty_tree(const Domain& domain, const Codomain& codomain) {
+                return {
+                    empty_cylinder(domain, codomain),
+                    universal_cylinder(domain, codomain),
+                    empty_cylinder(domain, codomain)
+                };
+            }
+
+            std::vector<CylinderSet<Domain, Codomain>> empty_tree(void) const {
+                return empty_tree(domain, codomain);
+            }
+
+            static std::vector<CylinderSet<Domain, Codomain>> universal_tree(const Domain& domain, const Codomain& codomain) {
+                return {
+                    empty_cylinder(domain, codomain),
+                    universal_cylinder(domain, codomain),
+                    universal_cylinder(domain, codomain)
+                };
+            }
+
+            std::vector<CylinderSet<Domain, Codomain>> universal_tree(void) const {
+                return universal_tree(domain, codomain);
+            }
+
+            void split_node(std::size_t  )
+
+            void split_node(std::size_t i) {
+                auto remainder = tree.at(i).domain_subset;
+                // for (std::size_t j = )
+            }
     }
 
 }

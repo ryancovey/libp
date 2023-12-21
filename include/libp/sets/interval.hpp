@@ -654,6 +654,11 @@ namespace libp {
         return rhs < lhs;
     }
 
+    template<BoundaryConcept LhsBoundary, BoundaryConcept RhsBoundary>
+    auto isdisjoint(const IntervalUnion<LhsBoundary>& lhs, const IntervalUnion<RhsBoundary>& rhs) {
+        return (lhs && rhs).isempty()
+    }
+
     template<BoundaryConcept Boundary>
     std::ostream& operator<<(std::ostream& os, const libp::IntervalUnion<Boundary>& A) {
         if (A.isempty()) {
